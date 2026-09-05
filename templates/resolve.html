@@ -2,179 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Work Proof - {{ ticket.ticket_id }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            background: radial-gradient(circle at 10% 20%, rgb(18, 24, 38) 0%, rgb(10, 13, 22) 90%);
-            min-height: 100vh;
-            color: #f8fafc;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            padding: 30px 15px;
-        }
-        .main-card {
-            background: #161f30;
-            border: 1px solid #232f48;
-            border-radius: 20px;
-            max-width: 900px;
-            margin: 0 auto;
-            overflow: hidden;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.6);
-        }
-        .header-bar {
-            background: #0f172a;
-            border-bottom: 1px solid #232f48;
-            padding: 20px 28px;
-        }
-        .evidence-preview-box {
-            background: #0b0f19;
-            border: 1px solid #334155;
-            border-radius: 12px;
-            padding: 12px;
-            text-align: center;
-        }
-        .evidence-img {
-            max-width: 100%;
-            height: 220px;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-        .upload-dropzone {
-            border: 2px dashed #10b981;
-            background: rgba(16, 185, 129, 0.05);
-            border-radius: 14px;
-            padding: 30px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .upload-dropzone:hover {
-            background: rgba(16, 185, 129, 0.12);
-            border-color: #34d399;
-        }
-        .btn-resolve {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            border: none;
-            color: white;
-            font-weight: 700;
-            padding: 13px 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
-        }
-        .btn-resolve:hover { transform: translateY(-1px); }
-    </style>
 </head>
-<body>
-
-    <div class="main-card">
-        <!-- Top Bar with Genuine Back Button -->
-        <div class="header-bar d-flex justify-content-between align-items-center">
-            <div>
-                <span class="badge bg-primary text-light px-3 py-1 mb-1">OFFICER RESOLUTION DESK</span>
-                <h4 class="fw-bold m-0 text-white"><i class="fa-solid fa-camera-retro text-success me-2"></i>Upload Work Completion Proof</h4>
-            </div>
-            <button type="button" onclick="window.history.back()" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                <i class="fa-solid fa-arrow-left me-1"></i> Back
-            </button>
+<body class="bg-dark text-light p-4">
+    <div class="container" style="max-width: 700px;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>Work Proof: {{ ticket.ticket_id }}</h4>
+            <button type="button" onclick="history.back()" class="btn btn-outline-secondary btn-sm">Back</button>
         </div>
-
-        <div class="p-4">
-            <div class="row g-3 mb-4">
-                <div class="col-md-4">
-                    <small class="text-secondary text-uppercase fw-semibold">TICKET ID</small>
-                    <p class="fw-bold text-info m-0 fs-5">{{ ticket.ticket_id }}</p>
-                </div>
-                <div class="col-md-4">
-                    <small class="text-secondary text-uppercase fw-semibold">ASSIGNED DEPARTMENT</small>
-                    <p class="fw-semibold text-light m-0">{{ ticket.department }}</p>
-                </div>
-                <div class="col-md-4">
-                    <small class="text-secondary text-uppercase fw-semibold">PRIORITY</small>
-                    <p class="m-0">
-                        <span class="badge {% if ticket.priority == 'HIGH' %}bg-danger{% elif ticket.priority == 'MEDIUM' %}bg-warning text-dark{% else %}bg-success{% endif %}">
-                            {{ ticket.priority }}
-                        </span>
-                    </p>
-                </div>
+        <p class="text-secondary">{{ ticket.description }}</p>
+        <form action="/resolve_ticket/{{ ticket.ticket_id }}" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label class="form-label">Attach Fixed/Solved Photo or Video Proof</label>
+                <input type="file" name="proof_media" class="form-control" accept="image/*,video/*" required>
             </div>
-
-            <div class="row g-4 mb-4">
-                <!-- Left: Citizen Damage Evidence (Before) -->
-                <div class="col-md-5">
-                    <label class="form-label text-danger fw-bold small text-uppercase">
-                        <i class="fa-solid fa-triangle-exclamation me-1"></i> 1. Citizen Damage Evidence (Before)
-                    </label>
-                    <div class="evidence-preview-box">
-                        {% if ticket.citizen_media and ticket.citizen_url %}
-                            {% if ticket.citizen_type == 'video' %}
-                                <video src="{{ ticket.citizen_url }}" controls class="evidence-img"></video>
-                            {% else %}
-                                <img src="{{ ticket.citizen_url }}" class="evidence-img" alt="Citizen Photo"
-                                     onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'badge bg-secondary small\'>File Missing</span>';">
-                            {% endif %}
-                            <small class="d-block text-secondary mt-2">{{ ticket.description }}</small>
-                        {% else %}
-                            <div class="d-flex align-items-center justify-content-center" style="height: 180px;">
-                                <span class="text-secondary small">Citizen did not upload photo.</span>
-                            </div>
-                            <small class="d-block text-secondary mt-1">{{ ticket.description }}</small>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Right: Officer Proof Upload (After) -->
-                <div class="col-md-7">
-                    <label class="form-label text-success fw-bold small text-uppercase">
-                        <i class="fa-solid fa-cloud-arrow-up me-1"></i> 2. Attach Repaired / Solved Proof (After)
-                    </label>
-                    
-                    <form action="/resolve_ticket/{{ ticket.ticket_id }}" method="POST" enctype="multipart/form-data">
-                        <div class="upload-dropzone mb-3" onclick="document.getElementById('proofFileInput').click()">
-                            <i class="fa-solid fa-file-circle-check fa-3x text-success mb-2"></i>
-                            <h6 class="fw-bold text-white mb-1" id="uploadLabel">Click here to Select Work Photo or Video</h6>
-                            <p class="small text-secondary mb-0">Select the camera photo of the repaired road, cleared garbage, or fixed light.</p>
-                            <input type="file" id="proofFileInput" name="proof_media" accept="image/*,video/*" style="display:none;" required onchange="previewProof(this)">
-                        </div>
-
-                        <div id="livePreviewContainer" class="text-center mb-3" style="display:none;">
-                            <span class="small text-success fw-bold d-block mb-1">Selected File Preview:</span>
-                            <img id="previewImg" class="rounded border border-success" style="max-height: 150px; object-fit: cover;" alt="Preview">
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            <button type="button" onclick="window.history.back()" class="btn btn-outline-secondary px-4">
-                                <i class="fa-solid fa-arrow-left me-1"></i> Back
-                            </button>
-                            <button type="submit" class="btn btn-resolve flex-grow-1">
-                                <i class="fa-solid fa-circle-check me-1"></i> Confirm & Mark Resolved
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+            <button type="submit" class="btn btn-success w-100 fw-bold">Confirm & Mark Resolved</button>
+        </form>
     </div>
-
-    <script>
-        function previewProof(input) {
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                document.getElementById('uploadLabel').innerText = "Selected: " + file.name;
-                
-                if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        document.getElementById('previewImg').src = e.target.result;
-                        document.getElementById('livePreviewContainer').style.display = 'block';
-                    }
-                    reader.readAsDataURL(file);
-                } else {
-                    document.getElementById('livePreviewContainer').style.display = 'none';
-                }
-            }
-        }
-    </script>
 </body>
 </html>
