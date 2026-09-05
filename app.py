@@ -610,49 +610,36 @@ def resolve_ticket(ticket_id):
     return redirect('/admin')
 
 # --- Deny & Delete Action ---
-@app.route('/deny_ticket/<ticket_id>', methods=['POST'])
 @app.route('/deny/<ticket_id>')
 @app.route('/deny_ticket/<ticket_id>')
 def deny_ticket(ticket_id):
-    if not session.get('admin_logged'):
+    if 'user' not in session:
         return redirect('/login')
-
-    reason_category = request.form.get('delete_reason', 'Fake Upload')
-    custom_comment = request.form.get('custom_comment', '').strip()
-    final_reason = reason_category + (f" - {custom_comment}" if custom_comment else "")
-
-    officer_name = f"{session.get('officer_name')} ({session.get('officer_gov_id', 'OFFICIAL')})"
-    deleted_at = datetime.now().strftime("%A, %d %b %Y • %I:%M %p")
-    deleted_epoch = time.time()
-
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
+    
+    conn = get_db_connection()
     cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM complaints WHERE ticket_id = ?", (ticket_id,))
+    
+    # 1. Image/Media file name fetch karke upload folder se safely delete karein
+    cursor.execute("SELECT media_name, image_name FROM complaints WHERE ticket_id = ?", (ticket_id,))
     row = cursor.fetchone()
-
     if row:
-        keys = row.keys()
-        dept_data = DEPARTMENT_OFFICERS.get(row['department'], DEPARTMENT_OFFICERS["Central Grievance Cell (Municipal Authority)"])
-        g_id = row['gov_dept_id'] if 'gov_dept_id' in keys else dept_data["dept_id"]
-        cursor.execute('''
-            INSERT INTO deleted_complaints (ticket_id, gov_dept_id, description, department, deleted_by, delete_reason, deleted_at, deleted_epoch)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (ticket_id, g_id, row['description'], row['department'], officer_name, final_reason, deleted_at, deleted_epoch))
-
-        for col in ['media_name', 'image_name', 'resolution_media', 'resolution_image']:
-            if col in keys and row[col]:
-                fname = row[col]
+        for key in ['media_name', 'image_name']:
+            if key in row.keys() and row[key]:
+                fname = row[key]
                 for folder in [CITIZEN_FOLDER, WORK_FOLDER, UPLOAD_FOLDER]:
                     fpath = os.path.join(folder, fname)
                     if os.path.exists(fpath):
-                        try: os.remove(fpath)
-                        except OSError: pass
-
+                        try:
+                            os.remove(fpath)
+                        except OSError:
+                            pass
+                            
+    # 2. Complaints table se record permanently delete karein
     cursor.execute("DELETE FROM complaints WHERE ticket_id = ?", (ticket_id,))
     conn.commit()
     conn.close()
+    
+    return redirect('/admin')
 
     return redirect('/admin')
 
