@@ -3,401 +3,336 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CivicAI - Grievance Portal (India)</title>
+    <title>CivicAI - AI Powered Citizen Grievance Portal</title>
+    <!-- Bootstrap & FontAwesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Leaflet Map CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <!-- Leaflet CSS for Spot Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        * { box-sizing: border-box; }
         body {
-            background: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #1e1b4b 100%) !important;
+            background: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #1e1b4b 100%);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px 12px;
-            margin: 0;
+            color: #f8fafc;
+            padding: 30px 12px;
         }
         .portal-card {
-            background: #ffffff !important;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
-            max-width: 640px;
+            background: #161f30;
+            border-radius: 24px;
+            border: 1px solid #232f48;
+            max-width: 620px;
             width: 100%;
+            margin: 0 auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .card-header-custom {
-            background: #0b0f19 !important;
-            padding: 18px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #1e293b;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border-bottom: 1px solid #232f48;
+            padding: 24px 20px;
+            text-align: center;
         }
         .card-body-custom {
-            padding: 28px;
-            background: #ffffff !important;
+            padding: 26px 22px;
         }
-        .quick-tag {
-            border: 1px solid #cbd5e1;
-            background: #f8fafc;
-            color: #334155;
-            font-size: 13px;
-            font-weight: 600;
-            padding: 7px 14px;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.2s ease;
+        .form-control, .form-select {
+            background: #0d1525;
+            border: 1px solid #283756;
+            color: #f8fafc;
+            border-radius: 10px;
         }
-        .quick-tag:hover {
-            background: #4f46e5;
+        .form-control:focus, .form-select:focus {
+            background: #0d1525;
+            border-color: #6366f1;
             color: #ffffff;
-            border-color: #4f46e5;
+            box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25);
         }
         .upload-box {
-            border: 2px dashed #94a3b8;
+            border: 2px dashed #374151;
             border-radius: 12px;
-            padding: 18px;
+            padding: 16px;
             text-align: center;
-            background: #f8fafc;
-            cursor: pointer;
+            background: rgba(15, 23, 42, 0.5);
             transition: all 0.2s ease;
+            cursor: pointer;
         }
         .upload-box:hover {
-            border-color: #4f46e5;
-            background: #eef2ff;
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.05);
         }
         #map {
-            height: 220px;
+            height: 180px;
             width: 100%;
             border-radius: 12px;
-            border: 1px solid #cbd5e1;
-            z-index: 1;
+            border: 1px solid #232f48;
         }
         .suggestions-dropdown {
             position: absolute;
             top: 100%;
             left: 0;
             right: 0;
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
-            border-radius: 0 0 10px 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-            max-height: 200px;
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            z-index: 1050;
+            max-height: 180px;
             overflow-y: auto;
-            z-index: 1000;
             display: none;
         }
         .suggestion-item {
-            padding: 9px 14px;
-            font-size: 13px;
+            padding: 8px 12px;
             cursor: pointer;
-            border-bottom: 1px solid #f1f5f9;
-            color: #1e293b;
+            font-size: 13px;
+            color: #cbd5e1;
+            border-bottom: 1px solid #1f2937;
         }
         .suggestion-item:hover {
-            background-color: #f1f5f9;
-            color: #4f46e5;
+            background: #1f2937;
+            color: #ffffff;
         }
         .btn-submit {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
             border: none;
-            color: white;
+            border-radius: 12px;
+            padding: 14px;
             font-weight: 600;
-            padding: 13px;
-            border-radius: 10px;
-            font-size: 16px;
-            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+            letter-spacing: 0.5px;
         }
         .btn-submit:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
+            background: linear-gradient(135deg, #4f46e5, #4338ca);
         }
     </style>
 </head>
 <body>
 
-    <div class="portal-card">
-        <!-- Top Navigation -->
-        <div class="card-header-custom">
-            <div class="d-flex align-items-center gap-2">
-                <i class="fa-solid fa-cube fs-5" style="color: #818cf8;"></i>
-                <span class="text-white fw-bold">CivicAI</span>
-                <span class="badge rounded-pill bg-dark border border-secondary text-secondary" style="font-size: 10px;">Citizen Grievance (India)</span>
-            </div>
-            <a href="/login" class="btn btn-sm btn-outline-light rounded-pill px-3">
-                <i class="fa-solid fa-shield-halved me-1 text-warning"></i> Officer Login
-            </a>
+<div class="portal-card">
+    <div class="card-header-custom">
+        <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+            <i class="fa-solid fa-city text-primary fa-2x"></i>
+            <h3 class="fw-bold m-0 text-white">CivicAI Citizen Portal</h3>
         </div>
-
-        <div class="card-body-custom">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-                <h4 class="fw-bold text-dark m-0">Report Civic Grievance</h4>
-                <span class="badge bg-light text-dark border px-2 py-1">Total: {{ total_count }}</span>
-            </div>
-            <p class="text-muted small mb-3">AI Engine analyzes priority, auto-detects spot in India, and routes tickets to departments.</p>
-
-            <!-- Quick Template Buttons -->
-            <div class="mb-3">
-                <label class="form-label text-uppercase text-secondary fw-bold" style="font-size: 11px;">Quick Issue Tags</label>
-                <div class="d-flex flex-wrap gap-2 mt-1">
-                    <button type="button" class="quick-tag" onclick="setQuickTag('Major road pothole and broken surface causing accidents.', 'Roads & Highway Authority')">🕳️ Road Damage</button>
-                    <button type="button" class="quick-tag" onclick="setQuickTag('Severe drinking water pipeline leakage and water accumulation.', 'Water & Sewage Board')">💧 Water Leak</button>
-                    <button type="button" class="quick-tag" onclick="setQuickTag('Unattended public garbage dump creating health hazards.', 'Municipal Corporation (Sanitation Dept)')">🗑️ Waste Dump</button>
-                    <button type="button" class="quick-tag" onclick="setQuickTag('Street light non-functional, complete dark zone at night.', 'Electricity & Lighting Board')">💡 Street Light</button>
-                </div>
-            </div>
-
-            <!-- Form -->
-            <form action="/analyze" method="POST" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label class="form-label fw-bold small text-secondary">Problem Details</label>
-                    <textarea class="form-control" id="complaintInput" name="complaint" rows="3" placeholder="Describe the problem or tap any tag above..." required style="border-radius: 10px;"></textarea>
-                </div>
-
-                <!-- Calendar Date & Department Dropdown -->
-                <div class="row g-2 mb-3">
-                    <div class="col-12 col-md-6">
-                        <label class="form-label fw-bold small text-secondary">
-                            <i class="fa-regular fa-calendar-days text-primary me-1"></i> Incident Date (Calendar)
-                        </label>
-                        <input type="date" class="form-control" id="incidentDate" name="incident_date" required style="border-radius: 10px;">
-                    </div>
-
-                    <div class="col-12 col-md-6">
-                        <label class="form-label fw-bold small text-secondary">
-                            <i class="fa-solid fa-building text-info me-1"></i> Department
-                        </label>
-                        <select class="form-select" id="departmentSelect" name="department" style="border-radius: 10px;">
-                            <option value="auto">🤖 Auto-Detect by AI</option>
-                            <option value="Roads & Highway Authority">Roads & Highway Authority</option>
-                            <option value="Water & Sewage Board">Water & Sewage Board</option>
-                            <option value="Municipal Corporation (Sanitation Dept)">Municipal Corporation (Sanitation Dept)</option>
-                            <option value="Electricity & Lighting Board">Electricity & Lighting Board</option>
-                            <option value="Central Grievance Cell (Municipal Authority)">Central Grievance Cell</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- SPOT LOCATION: SEARCH & AUTO GPS -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold small text-secondary mb-1">
-                        <i class="fa-solid fa-map-location-dot text-danger me-1"></i> Incident Spot (Auto-Select & Map)
-                    </label>
-
-                    <div class="position-relative">
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="locationInput" name="location" placeholder="Type area (e.g. Rohini, Andheri, Model Town) to auto-select..." autocomplete="off" oninput="handleTyping(this.value)" style="border-radius: 10px 0 0 10px;">
-                            <button class="btn btn-primary px-3" type="button" onclick="getGPS()" title="Auto GPS Pinpoint" style="border-radius: 0 10px 10px 0;">
-                                <i class="fa-solid fa-crosshairs me-1"></i> Auto GPS
-                            </button>
-                        </div>
-                        <div id="suggestionsBox" class="suggestions-dropdown"></div>
-                    </div>
-
-                    <input type="hidden" id="latitudeInput" name="latitude">
-                    <input type="hidden" id="longitudeInput" name="longitude">
-
-                    <div id="map" class="mt-2"></div>
-                    <div class="d-flex justify-content-between align-items-center mt-1">
-                        <small class="text-muted" style="font-size: 11px;">
-                            <i class="fa-solid fa-shield-halved text-success me-1"></i> Indian region locked. Drag pin to set exact point.
-                        </small>
-                        <span id="coordBadge" class="badge bg-light text-secondary border" style="font-size: 10px;">Coordinates Awaiting</span>
-                    </div>
-                </div>
-
-                <!-- Evidence Photo / Video -->
-                <div class="mb-4">
-                    <label class="form-label fw-bold small text-secondary">Attach Evidence (Photo or Video)</label>
-                    <div class="upload-box" onclick="document.getElementById('mediaInput').click()">
-                        <i class="fa-solid fa-photo-film fa-2x mb-2" style="color: #6366f1;"></i>
-                        <p class="m-0 text-dark fw-bold small" id="fileNameText">Click to attach Photo or Video clip</p>
-                        <small class="text-secondary" style="font-size: 11px;">Supports JPG, PNG, MP4, MOV</small>
-                        <input type="file" id="mediaInput" name="damage_media" accept="image/*,video/*" style="display:none;" onchange="showFileName(this)">
-                    </div>
-                </div>
-
-                <!-- Back & Submit Buttons -->
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-outline-secondary px-3 rounded-3" onclick="window.history.back()" title="Go Back">
-                        <i class="fa-solid fa-arrow-left me-1"></i> Back
-                    </button>
-                    <button type="submit" class="btn btn-submit flex-grow-1">
-                        Submit Grievance & AI Analysis &rarr;
-                    </button>
-                </div>
-            </form>
-        </div>
+        <p class="text-secondary small m-0">Report Grievances with AI Triage & Direct Official Email Dispatch</p>
     </div>
 
-    <!-- Leaflet Map JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        document.getElementById('incidentDate').value = new Date().toISOString().split('T')[0];
+    <div class="card-body-custom">
+        <form action="/analyze" method="POST" enctype="multipart/form-data">
+            
+            <!-- Hidden Inputs for Coordinates -->
+            <input type="hidden" id="latitudeInput" name="latitude">
+            <input type="hidden" id="longitudeInput" name="longitude">
 
-        // 1. Lock Map Boundaries to India
-        var indiaSouthWest = L.latLng(6.0, 68.0);
-        var indiaNorthEast = L.latLng(37.5, 97.5);
-        var indiaBounds = L.latLngBounds(indiaSouthWest, indiaNorthEast);
+            <!-- 1. Complaint Description -->
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-white">
+                    <i class="fa-solid fa-pen-to-square text-info me-1"></i> Grievance Details
+                </label>
+                <textarea class="form-control" name="complaint" rows="3" placeholder="Describe the issue (e.g., Pothole on main road, broken street light, overflowing garbage)..." required></textarea>
+            </div>
 
-        var map = L.map('map', {
-            maxBounds: indiaBounds,
-            maxBoundsViscosity: 1.0,
-            minZoom: 4
-        }).setView([28.6139, 77.2090], 12);
+            <!-- 2. Target Department -->
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-white">
+                    <i class="fa-solid fa-building-flag text-warning me-1"></i> Relevant Department
+                </label>
+                <select class="form-select" name="department">
+                    <option value="auto" selected>Auto-Detect via AI Engine</option>
+                    <option value="Roads & Transport">Roads & Transport Department</option>
+                    <option value="Sanitation & Waste">Sanitation & Municipal Waste</option>
+                    <option value="Water Supply">Water Supply & Drainage</option>
+                    <option value="Electricity Board">Electricity & Street Lighting</option>
+                    <option value="Public Safety">Public Safety & Municipal Authority</option>
+                </select>
+            </div>
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '©️ OpenStreetMap'
-        }).addTo(map);
+            <!-- 3. Spot Location & Auto GPS -->
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-white d-flex justify-content-between">
+                    <span><i class="fa-solid fa-location-dot text-danger me-1"></i> Incident Location Spot</span>
+                    <span class="text-info small" style="cursor:pointer;" onclick="triggerLiveGPS()">
+                        <i class="fa-solid fa-crosshairs me-1"></i> Tag Current GPS
+                    </span>
+                </label>
+                <div class="position-relative">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="locationInput" name="location" placeholder="Detecting live GPS or search area..." autocomplete="off" required>
+                        <button class="btn btn-outline-info" type="button" onclick="triggerLiveGPS()" title="Tag Live GPS">
+                            <i class="fa-solid fa-location-crosshairs"></i>
+                        </button>
+                    </div>
+                    <div id="suggestionsBox" class="suggestions-dropdown"></div>
+                </div>
+                
+                <!-- Live Interactive Map View -->
+                <div id="map" class="mt-2"></div>
+                <div class="d-flex justify-content-between align-items-center mt-1">
+                    <small class="text-secondary" style="font-size: 11px;">
+                        <i class="fa-solid fa-circle-info me-1"></i> Drag pin or click map to adjust location
+                    </small>
+                    <span id="coordBadge" class="badge bg-dark border border-secondary text-info" style="font-size: 10px;">GPS: Waiting</span>
+                </div>
+            </div>
 
-        var marker = L.marker([28.6139, 77.2090], { draggable: true }).addTo(map);
+            <!-- 4. Evidence Media Upload (Photo/Video with Live GPS Tagging) -->
+            <div class="mb-4">
+                <label class="form-label small fw-bold text-white">
+                    <i class="fa-solid fa-camera-retro text-success me-1"></i> Evidence Photo / Video
+                </label>
+                <div class="upload-box" onclick="document.getElementById('mediaFileInput').click();">
+                    <i class="fa-solid fa-cloud-arrow-up fa-2x text-secondary mb-1"></i>
+                    <div id="uploadText" class="text-white small fw-semibold">Click to capture / upload damage evidence</div>
+                    <small class="text-secondary" style="font-size: 11px;">Supports JPG, PNG, MP4, MOV (GPS automatically tags to media)</small>
+                </div>
+                <input type="file" id="mediaFileInput" name="damage_media" accept="image/*,video/*" style="display:none;" onchange="handleMediaSelected(this)">
+                
+                <!-- GPS Tagging Notification for Media -->
+                <div id="mediaGpsStatus" class="mt-2 text-secondary small" style="display: none;"></div>
+            </div>
 
-        function updateLocation(lat, lng, addressText = null) {
-            document.getElementById('latitudeInput').value = lat;
-            document.getElementById('longitudeInput').value = lng;
-            document.getElementById('coordBadge').innerText = lat.toFixed(4) + ", " + lng.toFixed(4);
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-submit w-100 text-white shadow-lg">
+                <i class="fa-solid fa-bolt me-1"></i> Process Grievance & Dispatch
+            </button>
+        </form>
+    </div>
+</div>
 
-            if (addressText) {
-                document.getElementById('locationInput').value = addressText;
-            } else {
-                fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data && data.display_name) {
-                            document.getElementById('locationInput').value = data.display_name;
-                        }
-                    })
-                    .catch(() => {
-                        document.getElementById('locationInput').value = lat.toFixed(5) + ', ' + lng.toFixed(5);
-                    });
-            }
-        }
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // 1. Initialize Map
+    let defaultLat = 28.6139, defaultLng = 77.2090; // Default Delhi/India
+    const map = L.map('map').setView([defaultLat, defaultLng], 14);
 
-        marker.on('dragend', function () {
-            var pos = marker.getLatLng();
-            updateLocation(pos.lat, pos.lng);
-        });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-        map.on('click', function (e) {
-            marker.setLatLng(e.latlng);
-            updateLocation(e.latlng.lat, e.latlng.lng);
-        });
+    let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
 
-        // 2. Auto GPS Pinpoint
-        function getGPS() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function (pos) {
-                    var lat = pos.coords.latitude;
-                    var lng = pos.coords.longitude;
-                    if (lat >= 6.0 && lat <= 37.5 && lng >= 68.0 && lng <= 97.5) {
-                        map.flyTo([lat, lng], 16);
-                        marker.setLatLng([lat, lng]);
-                        updateLocation(lat, lng);
+    function updateLocation(lat, lng, labelText = null) {
+        lat = parseFloat(lat).toFixed(6);
+        lng = parseFloat(lng).toFixed(6);
+
+        document.getElementById('latitudeInput').value = lat;
+        document.getElementById('longitudeInput').value = lng;
+        document.getElementById('coordBadge').innerText = `${lat}, ${lng}`;
+
+        if (labelText) {
+            document.getElementById('locationInput').value = labelText;
+        } else {
+            // Reverse Geocode
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        document.getElementById('locationInput').value = data.display_name;
                     } else {
-                        alert("Current GPS coordinates India boundary ke bahar hain.");
+                        document.getElementById('locationInput').value = `Incident Spot [${lat}, ${lng}]`;
                     }
-                }, function () {
-                    alert("GPS location permission allow karein.");
-                }, { enableHighAccuracy: true });
-            } else {
-                alert("Browser GPS support nahi karta.");
-            }
+                })
+                .catch(() => {
+                    document.getElementById('locationInput').value = `Incident Spot [${lat}, ${lng}]`;
+                });
         }
+    }
 
-        // 3. Live Typing & Auto-Select Suggestion Dropdown (India-Only)
-        var debounceTimer;
-        function handleTyping(query) {
-            clearTimeout(debounceTimer);
-            var box = document.getElementById('suggestionsBox');
-            if (query.trim().length < 3) {
-                box.style.display = 'none';
-                return;
-            }
+    marker.on('dragend', function (e) {
+        const coord = e.target.getLatLng();
+        map.setView(coord);
+        updateLocation(coord.lat, coord.lng);
+    });
 
-            debounceTimer = setTimeout(function () {
-                fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&q=' + encodeURIComponent(query))
-                    .then(res => res.json())
-                    .then(results => {
-                        if (results && results.length > 0) {
-                            box.innerHTML = '';
-                            results.slice(0, 5).forEach(function (place) {
-                                var item = document.createElement('div');
-                                item.className = 'suggestion-item';
-                                item.innerHTML = '<i class="fa-solid fa-location-dot text-danger me-2"></i>' + place.display_name;
-                                item.onclick = function () {
-                                    selectLocation(parseFloat(place.lat), parseFloat(place.lon), place.display_name);
-                                };
-                                box.appendChild(item);
-                            });
-                            box.style.display = 'block';
-                        } else {
-                            box.style.display = 'none';
-                        }
-                    });
-            }, 300);
-        }
+    map.on('click', function (e) {
+        marker.setLatLng(e.latlng);
+        map.setView(e.latlng);
+        updateLocation(e.latlng.lat, e.latlng.lng);
+    });
 
-        function selectLocation(lat, lng, name) {
-            document.getElementById('suggestionsBox').style.display = 'none';
-            map.flyTo([lat, lng], 16);
-            marker.setLatLng([lat, lng]);
-            updateLocation(lat, lng, name);
-        }
-
-        document.addEventListener('click', function (e) {
-            if (!document.getElementById('locationInput').contains(e.target)) {
-                document.getElementById('suggestionsBox').style.display = 'none';
-            }
-        });
-
-        // 4. Enter Key auto-selects first match
-        document.getElementById('locationInput').addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                var query = this.value.trim();
-                if (!query) return;
-                fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&q=' + encodeURIComponent(query))
-                    .then(res => res.json())
-                    .then(results => {
-                        if (results && results.length > 0) {
-                            selectLocation(parseFloat(results[0].lat), parseFloat(results[0].lon), results[0].display_name);
-                        }
-                    });
-            }
-        });
-
-        // Auto GPS on initial load
+    // 2. Fetch Live GPS
+    function triggerLiveGPS(callback) {
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function (pos) {
-                var lat = pos.coords.latitude;
-                var lng = pos.coords.longitude;
-                if (lat >= 6.0 && lat <= 37.5 && lng >= 68.0 && lng <= 97.5) {
-                    map.setView([lat, lng], 15);
+            document.getElementById('coordBadge').innerText = "Locating...";
+            navigator.geolocation.getCurrentPosition(
+                function (pos) {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    map.setView([lat, lng], 16);
                     marker.setLatLng([lat, lng]);
                     updateLocation(lat, lng);
-                }
-            }, function() {});
+                    if (callback) callback(lat, lng);
+                },
+                function (err) {
+                    document.getElementById('coordBadge').innerText = "GPS Blocked";
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+    }
+
+    // 3. Auto Tag Media with GPS on file selection
+    function handleMediaSelected(fileInput) {
+        if (fileInput.files && fileInput.files.length > 0) {
+            const fileName = fileInput.files[0].name;
+            document.getElementById('uploadText').innerText = `Selected: ${fileName}`;
+
+            const gpsDiv = document.getElementById('mediaGpsStatus');
+            gpsDiv.style.display = 'block';
+            gpsDiv.className = 'mt-2 text-info small';
+            gpsDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> File chosen. Stamping live GPS coordinates on media...';
+
+            triggerLiveGPS(function (lat, lng) {
+                gpsDiv.className = 'mt-2 text-success small fw-semibold';
+                gpsDiv.innerHTML = `<i class="fa-solid fa-circle-check text-success me-1"></i> Live GPS Tagged to Media: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            });
+        }
+    }
+
+    // 4. Autocomplete Location Search
+    let searchTimer;
+    document.getElementById('locationInput').addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        const query = this.value.trim();
+        const box = document.getElementById('suggestionsBox');
+
+        if (query.length < 3) {
+            box.style.display = 'none';
+            return;
         }
 
-        function setQuickTag(text, dept) {
-            document.getElementById('complaintInput').value = text;
-            if (dept) document.getElementById('departmentSelect').value = dept;
-            document.getElementById('complaintInput').focus();
-        }
+        searchTimer = setTimeout(() => {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(items => {
+                    box.innerHTML = '';
+                    if (items && items.length > 0) {
+                        items.slice(0, 5).forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = 'suggestion-item';
+                            div.innerText = item.display_name;
+                            div.onclick = function () {
+                                const lat = parseFloat(item.lat);
+                                const lon = parseFloat(item.lon);
+                                map.setView([lat, lon], 16);
+                                marker.setLatLng([lat, lon]);
+                                updateLocation(lat, lon, item.display_name);
+                                box.style.display = 'none';
+                            };
+                            box.appendChild(div);
+                        });
+                        box.style.display = 'block';
+                    } else {
+                        box.style.display = 'none';
+                    }
+                });
+        }, 300);
+    });
 
-        function showFileName(input) {
-            if (input.files && input.files[0]) {
-                var file = input.files[0];
-                var isVideo = file.type.indexOf('video') !== -1;
-                var label = isVideo ? '🎥 Video: ' : '🖼️ Photo: ';
-                document.getElementById('fileNameText').innerHTML = label + '<strong class="text-primary">' + file.name + '</strong>';
-            }
-        }
-    </script>
+    // Auto-detect GPS on initial page load
+    window.addEventListener('DOMContentLoaded', () => {
+        triggerLiveGPS();
+    });
+</script>
+
 </body>
 </html>
