@@ -349,7 +349,7 @@ def analyze():
     total_count = get_complaint_count()
 
     return render_template(
-        'dashboard'.html',
+        'dashboard.html',
         ticket_id=ticket_id,
         gov_dept_id=gov_dept_id,
         officer_title=assigned_officer_title,
