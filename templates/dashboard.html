@@ -3,382 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - CivicAI</title>
+    <title>CivicAI - Grievance Dispatched</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
-            background: #f0f2f5;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #1e1b4b 100%);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 12px;
+            color: #f8fafc;
         }
-        .navbar-custom {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 15px 0;
+        .docket-card {
+            background: #161f30;
+            border-radius: 20px;
+            border: 1px solid #232f48;
+            max-width: 560px;
+            width: 100%;
+            padding: 30px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
         }
-        .navbar-custom .navbar-brand {
-            color: white;
-            font-weight: 700;
-            font-size: 24px;
-        }
-        .navbar-custom .nav-link {
-            color: rgba(255,255,255,0.8) !important;
-            transition: all 0.3s;
-        }
-        .navbar-custom .nav-link:hover {
-            color: white !important;
-        }
-        .stat-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: all 0.3s;
+        .ticket-banner {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px dashed #6366f1;
+            border-radius: 12px;
+            padding: 14px;
             text-align: center;
+            margin-bottom: 20px;
         }
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        .stat-card .stat-number {
-            font-size: 32px;
-            font-weight: 700;
-        }
-        .stat-card .stat-label {
-            color: #666;
-            font-size: 14px;
-        }
-        .stat-card .stat-icon {
-            font-size: 30px;
+        .detail-row {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 10px;
+            padding: 11px 16px;
             margin-bottom: 10px;
-        }
-        .stat-blue .stat-number { color: #4a90e2; }
-        .stat-blue .stat-icon { color: #4a90e2; }
-        .stat-green .stat-number { color: #28a745; }
-        .stat-green .stat-icon { color: #28a745; }
-        .stat-red .stat-number { color: #dc3545; }
-        .stat-red .stat-icon { color: #dc3545; }
-        .stat-orange .stat-number { color: #fd7e14; }
-        .stat-orange .stat-icon { color: #fd7e14; }
-        
-        .complaint-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: all 0.3s;
-        }
-        .complaint-card:hover {
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        .complaint-card .complaint-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-        }
-        .complaint-card .complaint-id {
-            font-weight: 700;
-            color: #667eea;
-        }
-        .complaint-card .complaint-status {
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .status-pending { background: #fff3cd; color: #856404; }
-        .status-resolved { background: #d4edda; color: #155724; }
-        .status-inprogress { background: #cce5ff; color: #004085; }
-        
-        .priority-high { background: #f8d7da; color: #721c24; }
-        .priority-medium { background: #fff3cd; color: #856404; }
-        .priority-low { background: #d4edda; color: #155724; }
-        
-        .btn-submit {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border: none;
-            color: white;
-            padding: 10px 30px;
-            border-radius: 10px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-            color: white;
-        }
-        .btn-logout {
-            background: transparent;
-            border: 2px solid white;
-            color: white;
-            padding: 5px 20px;
-            border-radius: 20px;
-            transition: all 0.3s;
-        }
-        .btn-logout:hover {
-            background: white;
-            color: #667eea;
-        }
-        .welcome-text {
-            color: white;
-            margin: 0;
-            font-weight: 300;
-        }
-        .welcome-text strong {
-            font-weight: 700;
-        }
-        .modal-content {
-            border-radius: 20px;
-        }
-        .modal-header {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border-radius: 20px 20px 0 0;
-        }
-        .form-control {
-            border-radius: 10px;
-            padding: 12px;
-        }
-        .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
         }
     </style>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-custom">
-        <div class="container">
-            <a class="navbar-brand" href="/dashboard">
-                <i class="fas fa-city me-2"></i>CivicAI
+
+    <div class="docket-card">
+        <div class="text-center mb-3">
+            <i class="fa-solid fa-circle-check fa-3x text-success mb-2"></i>
+            <h4 class="fw-bold m-0 text-white">Grievance Registered</h4>
+            <p class="text-secondary small mt-1">Dispatched to Official Government Control Desk</p>
+        </div>
+
+        <div class="ticket-banner">
+            <span class="text-secondary small d-block text-uppercase">Tracking Ticket ID</span>
+            <h3 class="fw-bold text-info m-0 mt-1">{{ ticket_id }}</h3>
+            {% if gov_dept_id %}
+            <span class="badge bg-dark border border-warning text-warning mt-2" style="font-size: 11px;">
+                Gov Department ID: {{ gov_dept_id }}
+            </span>
+            {% endif %}
+        </div>
+
+        <div class="detail-row">
+            <span class="text-secondary small">Department</span>
+            <span class="fw-bold text-white small">{{ department }}</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="text-secondary small">AI Priority</span>
+            <span class="badge {% if priority == 'HIGH' %}bg-danger{% elif priority == 'MEDIUM' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                {{ priority }} PRIORITY
+            </span>
+        </div>
+
+        <div class="detail-row">
+            <span class="text-secondary small">Incident Location</span>
+            <span class="text-white small fw-semibold text-truncate" style="max-width: 250px;">{{ location }}</span>
+        </div>
+
+        {% if map_url %}
+        <div class="detail-row">
+            <span class="text-secondary small">Spot Geotag</span>
+            <a href="{{ map_url }}" target="_blank" class="badge bg-primary text-decoration-none">
+                <i class="fa-brands fa-google me-1"></i> View on Google Maps
             </a>
-            <div class="navbar-nav ms-auto d-flex align-items-center">
-                <span class="welcome-text me-3">
-                    Welcome, <strong id="userName">User</strong> 👋
-                </span>
-                <button class="btn btn-logout" id="logoutBtn">
-                    <i class="fas fa-sign-out-alt me-1"></i> Logout
-                </button>
-            </div>
         </div>
-    </nav>
+        {% endif %}
 
-    <div class="container mt-4">
-        <!-- Stats Row -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="stat-card stat-blue">
-                    <div class="stat-icon"><i class="fas fa-tasks"></i></div>
-                    <div class="stat-number" id="totalComplaints">0</div>
-                    <div class="stat-label">Total Complaints</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card stat-orange">
-                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                    <div class="stat-number" id="pendingComplaints">0</div>
-                    <div class="stat-label">Pending</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card stat-green">
-                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                    <div class="stat-number" id="resolvedComplaints">0</div>
-                    <div class="stat-label">Resolved</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card stat-red">
-                    <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                    <div class="stat-number" id="criticalComplaints">0</div>
-                    <div class="stat-label">Critical</div>
-                </div>
-            </div>
+        {% if media_name and media_url %}
+        <div class="detail-row">
+            <span class="text-secondary small">Attached Evidence</span>
+            <a href="{{ media_url }}" target="_blank" class="badge bg-dark border border-secondary text-info text-decoration-none">
+                <i class="fa-solid fa-paperclip me-1"></i> View Media
+            </a>
         </div>
+        {% endif %}
 
-        <!-- Report Button -->
-        <div class="text-center mb-4">
-            <button class="btn btn-submit" data-bs-toggle="modal" data-bs-target="#reportModal">
-                <i class="fas fa-plus-circle me-2"></i> Report New Issue
-            </button>
-        </div>
-
-        <!-- Complaints List -->
-        <div class="card">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Your Complaints</h5>
-            </div>
-            <div class="card-body" id="complaintsList">
-                <div class="text-center text-muted py-5">
-                    <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
-                    No complaints yet. Click "Report New Issue" to get started!
-                </div>
-            </div>
+        <div class="text-center mt-4 d-flex gap-2">
+            <a href="/" class="btn btn-outline-light rounded-pill px-4 btn-sm flex-grow-1">&larr; Report Another Grievance</a>
+            <a href="/login" class="btn btn-primary rounded-pill px-4 btn-sm">Officer Dashboard &rarr;</a>
         </div>
     </div>
 
-    <!-- Report Modal -->
-    <div class="modal fade" id="reportModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-upload me-2"></i>Report a Problem</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="complaintForm">
-                        <div class="mb-3">
-                            <label class="form-label">Title</label>
-                            <input type="text" id="complaintTitle" class="form-control" placeholder="Enter a brief title" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Description</label>
-                            <textarea id="complaintDesc" class="form-control" rows="3" placeholder="Describe the problem in detail" required></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Location</label>
-                            <input type="text" id="complaintLocation" class="form-control" placeholder="Enter location" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Upload Photo (Optional)</label>
-                            <input type="file" id="complaintImage" class="form-control" accept="image/*">
-                        </div>
-                        <div id="formAlert" class="alert" style="display:none;"></div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" form="complaintForm" class="btn btn-primary">
-                        <i class="fas fa-paper-plane me-2"></i> Submit Complaint
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Load user data
-        async function loadData() {
-            try {
-                const response = await fetch('/api/complaints');
-                const complaints = await response.json();
-                
-                const userComplaints = complaints; // In real, filter by user
-                const total = userComplaints.length;
-                const pending = userComplaints.filter(c => c.status === 'Pending').length;
-                const resolved = userComplaints.filter(c => c.status === 'Resolved').length;
-                const critical = userComplaints.filter(c => c.severity === 'CRITICAL').length;
-                
-                document.getElementById('totalComplaints').textContent = total;
-                document.getElementById('pendingComplaints').textContent = pending;
-                document.getElementById('resolvedComplaints').textContent = resolved;
-                document.getElementById('criticalComplaints').textContent = critical;
-                
-                renderComplaints(userComplaints);
-            } catch (error) {
-                console.error('Error loading data:', error);
-            }
-        }
-
-        function renderComplaints(complaints) {
-            const container = document.getElementById('complaintsList');
-            
-            if (complaints.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center text-muted py-5">
-                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
-                        No complaints yet. Click "Report New Issue" to get started!
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = complaints.map(c => `
-                <div class="complaint-card">
-                    <div class="complaint-header">
-                        <span class="complaint-id">#${c.id}</span>
-                        <span class="complaint-status ${c.status === 'Resolved' ? 'status-resolved' : 'status-pending'}">
-                            ${c.status}
-                        </span>
-                    </div>
-                    <h6>${c.title}</h6>
-                    <p class="text-muted small mb-2">📍 ${c.location}</p>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <span class="badge bg-primary">${c.category}</span>
-                        <span class="badge ${c.severity === 'CRITICAL' ? 'bg-danger' : c.severity === 'HIGH' ? 'bg-warning' : 'bg-success'}">
-                            ${c.severity}
-                        </span>
-                        <span class="badge bg-info">Priority: ${c.priority_score}/100</span>
-                        <span class="badge bg-secondary">AI: ${Math.round(c.confidence * 100)}%</span>
-                    </div>
-                    ${c.status === 'Pending' ? `
-                        <div class="mt-2">
-                            <a href="/resolve/${c.id}" class="btn btn-sm btn-success">
-                                <i class="fas fa-check me-1"></i> Resolve
-                            </a>
-                        </div>
-                    ` : ''}
-                </div>
-            `).join('');
-        }
-
-        // Submit complaint
-        document.getElementById('complaintForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const title = document.getElementById('complaintTitle').value;
-            const description = document.getElementById('complaintDesc').value;
-            const location = document.getElementById('complaintLocation').value;
-            
-            const alertDiv = document.getElementById('formAlert');
-            
-            try {
-                const response = await fetch('/api/complaint', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, description, location })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alertDiv.className = 'alert alert-success';
-                    alertDiv.textContent = '✅ Complaint submitted successfully!';
-                    alertDiv.style.display = 'block';
-                    
-                    // Reset form
-                    this.reset();
-                    
-                    // Reload data after 1 second
-                    setTimeout(() => {
-                        loadData();
-                        alertDiv.style.display = 'none';
-                        // Close modal
-                        document.querySelector('#reportModal .btn-close').click();
-                    }, 1500);
-                } else {
-                    alertDiv.className = 'alert alert-danger';
-                    alertDiv.textContent = '❌ ' + data.message;
-                    alertDiv.style.display = 'block';
-                }
-            } catch (error) {
-                alertDiv.className = 'alert alert-danger';
-                alertDiv.textContent = '❌ Network error. Please try again.';
-                alertDiv.style.display = 'block';
-            }
-        });
-
-        // Logout
-        document.getElementById('logoutBtn').addEventListener('click', async function() {
-            await fetch('/api/logout', { method: 'POST' });
-            window.location.href = '/login';
-        });
-
-        // Load data on page load
-        loadData();
-    </script>
 </body>
 </html>
