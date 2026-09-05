@@ -372,30 +372,7 @@ def analyze():
 # --- Officer Auth Routes ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    error = None
-    if request.method == 'POST':
-        gov_id = request.form.get('gov_id', '').strip().upper()
-        full_name = request.form.get('full_name', '').strip()
-        department = request.form.get('department', '').strip()
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '').strip()
-
-        if not gov_id or not full_name or not username or not password:
-            error = "Sabhi fields bharna anivarya hai!"
-        else:
-            conn = sqlite3.connect(DB_NAME)
-            cursor = conn.cursor()
-            try:
-                cursor.execute("INSERT INTO officers (gov_id, full_name, department, username, password) VALUES (?, ?, ?, ?, ?)",
-                               (gov_id, full_name, department, username, password))
-                conn.commit()
-                conn.close()
-                return redirect('/login?registered=1')
-            except sqlite3.IntegrityError:
-                error = "Yeh Govt ID ya Username pehle se registered hai!"
-                conn.close()
-
-    return render_template('register.html', error=error)
+    return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
