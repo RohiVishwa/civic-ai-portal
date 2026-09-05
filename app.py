@@ -372,6 +372,7 @@ def analyze():
 # --- Officer Auth Routes ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    flash("Public registration is disabled. Contact Nodal Authority For login access.","warning")
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
