@@ -1,0 +1,1 @@
+Flask==3.0.0\nwerkzeug==3.0.1\ngunicorn==21.2.0
