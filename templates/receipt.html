@@ -14,23 +14,23 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px 12px;
+            padding: 20px 14px;
             color: #f8fafc;
         }
         .docket-card {
             background: #161f30;
             border-radius: 20px;
             border: 1px solid #232f48;
-            max-width: 540px;
+            max-width: 550px;
             width: 100%;
-            padding: 24px;
+            padding: 26px;
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
         }
         .ticket-banner {
             background: rgba(99, 102, 241, 0.1);
             border: 1px dashed #6366f1;
             border-radius: 12px;
-            padding: 12px;
+            padding: 14px;
             text-align: center;
             margin-bottom: 18px;
         }
@@ -49,22 +49,23 @@
 
     <div class="docket-card">
         <div class="text-center mb-3">
-            <i class="fa-solid fa-circle-check fa-3x text-success mb-2"></i>
+            <i class="fa-solid fa-envelope-circle-check fa-3x text-success mb-2"></i>
             <h4 class="fw-bold m-0 text-white">Grievance Dispatched</h4>
-            <p class="text-secondary small mt-1">Directly Assigned to Concerned Department Officer</p>
+            <p class="text-secondary small mt-1">Official High-Priority Email Triggered to Government</p>
         </div>
 
         <div class="ticket-banner">
             <span class="text-secondary small d-block text-uppercase">Tracking Ticket ID</span>
             <h3 class="fw-bold text-info m-0 mt-1">{{ ticket_id }}</h3>
             <span class="badge bg-dark border border-warning text-warning mt-2" style="font-size: 11px;">
-                Department ID: {{ gov_dept_id }}
+                Gov Department ID: {{ gov_dept_id }}
             </span>
         </div>
 
+        <!-- EMAIL CONFIRMATION NOTIFICATION -->
         <div class="alert alert-success bg-success bg-opacity-10 border-success border-opacity-25 py-2 small mb-3">
-            <div class="fw-bold text-white"><i class="fa-solid fa-user-shield text-success me-1"></i> {{ officer_title }}</div>
-            <small class="text-secondary">Official Inbox: <strong class="text-info">{{ officer_email }}</strong></small>
+            <div class="fw-bold text-white"><i class="fa-solid fa-paper-plane text-success me-1"></i> Dispatched to: {{ officer_title if officer_title else 'Nodal Field Officer' }}</div>
+            <small class="text-secondary">Official Inbox: <strong class="text-info">{{ officer_email if officer_email else dispatched_email }}</strong></small>
         </div>
 
         <div class="detail-row">
@@ -73,7 +74,7 @@
         </div>
 
         <div class="detail-row">
-            <span class="text-secondary small">AI Severity Triage</span>
+            <span class="text-secondary small">AI Priority Assessment</span>
             <span class="badge {% if priority == 'HIGH' %}bg-danger{% elif priority == 'MEDIUM' %}bg-warning text-dark{% else %}bg-success{% endif %}">
                 {{ priority }} PRIORITY
             </span>
@@ -81,7 +82,7 @@
 
         <div class="detail-row">
             <span class="text-secondary small">Incident Location</span>
-            <span class="text-white small fw-semibold text-truncate" style="max-width: 230px;">{{ location }}</span>
+            <span class="text-white small fw-semibold text-truncate" style="max-width: 240px;">{{ location }}</span>
         </div>
 
         {% if map_url %}
@@ -95,15 +96,15 @@
 
         {% if media_name and media_url %}
         <div class="detail-row">
-            <span class="text-secondary small">Citizen Evidence</span>
+            <span class="text-secondary small">Attached Evidence</span>
             <a href="{{ media_url }}" target="_blank" class="badge bg-dark border border-secondary text-info text-decoration-none">
-                <i class="fa-solid fa-paperclip me-1"></i> View Attachment
+                <i class="fa-solid fa-paperclip me-1"></i> View File
             </a>
         </div>
         {% endif %}
 
         <div class="text-center mt-4 d-flex gap-2">
-            <a href="/" class="btn btn-outline-light rounded-pill px-3 btn-sm flex-grow-1">&larr; File Another Issue</a>
+            <a href="/" class="btn btn-outline-light rounded-pill px-3 btn-sm flex-grow-1">&larr; File Another Grievance</a>
             <a href="/login" class="btn btn-warning rounded-pill px-3 btn-sm fw-semibold text-dark">Officer Login &rarr;</a>
         </div>
     </div>
