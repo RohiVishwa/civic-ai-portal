@@ -611,6 +611,8 @@ def resolve_ticket(ticket_id):
 
 # --- Deny & Delete Action ---
 @app.route('/deny_ticket/<ticket_id>', methods=['POST'])
+@app.route('/deny/<ticket_id>')
+@app.route('/deny_ticket/<ticket_id>')
 def deny_ticket(ticket_id):
     if not session.get('admin_logged'):
         return redirect('/login')

@@ -295,9 +295,9 @@
                                     <a href="/resolve/{{ c.ticket_id }}" class="btn btn-success btn-sm fw-bold">
                                         <i class="fa-solid fa-cloud-arrow-up me-1"></i> Upload Proof
                                     </a>
-                                    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#denyModal" onclick="openDenyModal('{{ c.ticket_id }}')">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
+                                    <a href="/deny/{{ c.ticket_id }}" class="btn btn-danger btn-sm" onclick="return confirm('Kya aap is ticket ko Deny karke delete karna chahte hain?');">
+    <i class="fa-solid fa-trash me-1"></i> Deny
+</a>
                                 </div>
                             {% else %}
                                 <span class="text-success small fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Closed</span>
