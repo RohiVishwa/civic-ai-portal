@@ -49,11 +49,12 @@
 
     <div class="docket-card">
         <div class="text-center mb-3">
-            <i class="fa-solid fa-paper-plane fa-3x text-success mb-2"></i>
+            <i class="fa-solid fa-envelope-circle-check fa-3x text-success mb-2"></i>
             <h4 class="fw-bold m-0 text-white">Grievance Dispatched</h4>
             <p class="text-secondary small mt-1">Official High-Priority Email Triggered to Government</p>
         </div>
 
+        <!-- Ticket ID -->
         <div class="ticket-banner">
             <span class="text-secondary small d-block text-uppercase">Tracking Ticket ID</span>
             <h3 class="fw-bold text-info m-0 mt-1">{{ ticket_id }}</h3>
@@ -62,9 +63,12 @@
             </span>
         </div>
 
+        <!-- Officer & Email Box -->
         <div class="alert alert-success bg-success bg-opacity-10 border-success border-opacity-25 py-2 small mb-3">
-            <div class="fw-bold text-white"><i class="fa-solid fa-user-shield text-success me-1"></i> Dispatched to: {{ officer_title if officer_title else 'Nodal Field Officer' }}</div>
-            <small class="text-secondary">Official Inbox: <strong class="text-info">{{ officer_email if officer_email else 'cmo.civic.escalation@gmail.com' }}</strong></small>
+            <div class="fw-bold text-white">
+                <i class="fa-solid fa-paper-plane text-success me-1"></i> Dispatched to: {{ officer_title }}
+            </div>
+            <small class="text-secondary">Official Inbox: <strong class="text-info">{{ officer_email }}</strong></small>
         </div>
 
         <div class="detail-row">
