@@ -347,9 +347,11 @@ def analyze():
     send_officer_dispatch_email(department, ticket_id, priority, complaint_text, location_text, map_url, saved_media_name)
 
     total_count = get_complaint_count()
+    assigned_officer_title = assigned_officer_title if 'assigned_officer_title' in locals() and assigned_officer_title else "Nodal Grievance Officer"
+    assigned_officer_email = assigned_officer_email if 'assigned_officer_email' in locals() and assigned_officer_email else "cmo.civic.escalation@gmail.com"
 
     return render_template(
-        'dashboard.html',
+        "dashboard.html",
         ticket_id=ticket_id,
         gov_dept_id=gov_dept_id,
         officer_title=assigned_officer_title,
