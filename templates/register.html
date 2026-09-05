@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicAI - Officer Registration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #1e1b4b 100%) !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 12px;
+            color: #f8fafc;
+        }
+        .auth-card {
+            background: #161f30 !important;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+            max-width: 480px;
+            width: 100%;
+            padding: 32px 28px;
+            border: 1px solid #232f48;
+        }
+        .form-control, .form-select {
+            background: #0b0f19 !important;
+            border: 1px solid #334155 !important;
+            color: #f8fafc !important;
+            border-radius: 10px;
+            padding: 11px 14px;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25) !important;
+        }
+        .btn-auth {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 12px;
+            border-radius: 10px;
+            width: 100%;
+            font-size: 15px;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+        }
+        .btn-auth:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="auth-card">
+        <div class="text-center mb-4">
+            <i class="fa-solid fa-id-card-clip fa-3x text-success mb-2"></i>
+            <h4 class="fw-bold text-white m-0">Officer Registration</h4>
+            <p class="text-secondary small mt-1">Enroll Municipal Authority Personnel</p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger py-2 small mb-3 border-0">
+            <i class="fa-solid fa-triangle-exclamation me-1"></i> {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/register" method="POST">
+            <div class="mb-3">
+                <label class="form-label small text-secondary fw-semibold">FULL NAME</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-signature"></i></span>
+                    <input type="text" name="full_name" class="form-control" placeholder="e.g. Er. Rajesh Kumar" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small text-secondary fw-semibold">ASSIGNED DEPARTMENT</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-building"></i></span>
+                    <select name="department" class="form-select" required>
+                        <option value="Roads & Highway Authority">Roads & Highway Authority</option>
+                        <option value="Water & Sewage Board">Water & Sewage Board</option>
+                        <option value="Municipal Corporation (Sanitation Dept)">Municipal Corporation (Sanitation Dept)</option>
+                        <option value="Electricity & Lighting Board">Electricity & Lighting Board</option>
+                        <option value="Central Grievance Cell (Municipal Authority)" selected>Central Grievance Cell</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small text-secondary fw-semibold">USERNAME</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-at"></i></span>
+                    <input type="text" name="username" class="form-control" placeholder="Unique username" required>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label small text-secondary fw-semibold">PASSWORD</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-lock"></i></span>
+                    <input type="password" name="password" class="form-control" placeholder="Set a secure password" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-auth mb-3">
+                <i class="fa-solid fa-user-plus me-1"></i> Register Officer Account &rarr;
+            </button>
+        </form>
+
+        <div class="text-center pt-2 border-top border-secondary border-opacity-25">
+            <p class="small text-secondary m-0">Pehle se account hai? <a href="/login" class="text-info text-decoration-none fw-semibold">Login Karein</a></p>
+            <a href="/" class="small text-muted d-block mt-2 text-decoration-none">&larr; Back to Citizen Portal</a>
+        </div>
+    </div>
+
+</body>
+</html>
