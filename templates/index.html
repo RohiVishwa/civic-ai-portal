@@ -98,8 +98,14 @@
             background: #1d4ed8;
         }
         #map {
+            width: 100%;
+            height: 220px !important;
+            min-height: 220px !important;
             border-radius: 10px;
             border: 1px solid #cbd5e1;
+            margin-top: 8px;
+            z-index: 1;
+        
         }
     </style>
 </head>
@@ -107,9 +113,17 @@
 
 <div class="portal-card">
     <div class="card-header-custom">
-        <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
-            <i class="fa-solid fa-city text-primary fa-2x"></i>
-            <h3 class="fw-bold m-0 text-dark">CivicAI Citizen Portal</h3>
+        <!-- Header with Officer Login Button -->
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+            <div>
+                <h4 class="fw-bold m-0 text-dark">
+                    <i class="fa-solid fa-city text-primary me-2"></i>CivicAI Citizen Portal
+                </h4>
+                <p class="text-secondary small m-0 mt-1">Smart Grievance Redressal & Triage</p>
+            </div>
+            <a href="/login" class="btn btn-outline-dark btn-sm fw-semibold shadow-sm" style="border-radius: 8px; font-size: 12px; padding: 6px 12px;">
+                <i class="fa-solid fa-user-shield text-primary me-1"></i> Officer Login
+            </a>
         </div>
         <p class="text-secondary small m-0">Report Grievances with AI Triage & Direct Official Email Dispatch</p>
     </div>
@@ -163,7 +177,7 @@
                 </div>
                 
                 <!-- Live Interactive Map View -->
-                <div id="map" class="mt-2"></div>
+                <div id="map" class="mt-2" style="height: 220px; width: 100%; border-radius: 10px; border: 1px solid #cbd5e1;"></div>
                 <div class="d-flex justify-content-between align-items-center mt-1">
                     <small class="text-secondary" style="font-size: 11px;">
                         <i class="fa-solid fa-circle-info me-1"></i> Drag pin or click map to adjust location
@@ -331,6 +345,11 @@
     window.addEventListener('DOMContentLoaded', () => {
         triggerLiveGPS();
     });
+    setTimeout(function() {
+        if (typeof map !== 'undefined' && map) {
+            map.invalidateSize();
+        }
+    }, 400);
 </script>
 
 </body>
