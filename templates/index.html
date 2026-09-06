@@ -161,16 +161,19 @@
             
 
 
-<!-- Live Evidence Camera with Satellite GPS Coordinates -->
+
+
+
+<!-- Live Evidence Camera + AI Analysis Pipeline -->
 <div class="mb-3">
     <label class="form-label small fw-bold text-white">
-        <i class="fa-solid fa-camera text-primary me-1"></i> Live Evidence Capture (Mandatory GPS Satellite Lock)
+        <i class="fa-solid fa-camera text-primary me-1"></i> Live Evidence Capture (Real-time AI Scan + Satellite GPS)
     </label>
 
     <div class="p-3 rounded" style="background: rgba(15, 23, 42, 0.7); border: 1px dashed #3b82f6;">
         <!-- Live Video Viewfinder -->
         <div class="position-relative mb-2" style="max-width: 420px; margin: 0 auto; border-radius: 8px; overflow: hidden; background: #000;">
-            <video id="liveFeed" autoplay playsinline style="width: 100%; height: 260px; object-fit: cover; display: block;"></video>
+            <video id="liveFeed" autoplay playsinline style="width: 100%; height: 240px; object-fit: cover; display: block;"></video>
             <canvas id="photoCanvas" style="display: none;"></canvas>
             
             <!-- Live Coordinate HUD Overlay -->
@@ -183,21 +186,23 @@
 
         <div class="d-flex justify-content-center gap-2 mb-2">
             <button type="button" class="btn btn-sm btn-outline-info" onclick="initLiveCamera()">
-                <i class="fa-solid fa-arrows-rotate me-1"></i> Start / Switch Camera
+                <i class="fa-solid fa-arrows-rotate me-1"></i> Open / Switch Camera
             </button>
             <button type="button" class="btn btn-sm btn-success fw-bold" onclick="captureLiveEvidence()">
-                <i class="fa-solid fa-circle-dot me-1"></i> Snap Photo with GPS
+                <i class="fa-solid fa-crosshairs me-1"></i> Snap & Scan with GPS
             </button>
         </div>
 
+        <!-- Hidden Real File Input that Flask AI Engine reads -->
+        <input type="file" name="damage_media" id="damageMediaInput" style="display: none;" required>
+
         <div id="snapStatus" class="text-center small text-secondary mt-1">
-            Click 'Snap Photo' to freeze frame and stamp latitude & longitude.
+            Click 'Snap & Scan with GPS' to lock satellite location and run AI Triage.
         </div>
     </div>
 </div>
 
-<!-- Hidden inputs sent directly to Flask backend -->
-<input type="hidden" name="captured_image_data" id="capturedImageData">
+<!-- Hidden inputs for backend coordinates -->
 <input type="hidden" name="location" id="locationInput">
 <input type="hidden" name="latitude" id="latitudeInput">
 <input type="hidden" name="longitude" id="longitudeInput">
@@ -206,16 +211,13 @@
 let streamTrack = null;
 let currentLat = null;
 let currentLng = null;
-let gpsLocked = false;
 
-// 1. Acquire high-accuracy GPS coordinates continuously
 function trackGpsSatellite() {
     if ("geolocation" in navigator) {
         navigator.geolocation.watchPosition(
             function(pos) {
                 currentLat = pos.coords.latitude.toFixed(6);
                 currentLng = pos.coords.longitude.toFixed(6);
-                gpsLocked = true;
                 
                 document.getElementById('latitudeInput').value = currentLat;
                 document.getElementById('longitudeInput').value = currentLng;
@@ -239,7 +241,6 @@ function trackGpsSatellite() {
     }
 }
 
-// 2. Launch Camera Stream
 async function initLiveCamera() {
     try {
         if (streamTrack) {
@@ -254,18 +255,18 @@ async function initLiveCamera() {
         video.srcObject = stream;
         trackGpsSatellite();
     } catch (err) {
-        alert("Camera access denied or unavailable: " + err.message);
+        console.log("Camera trigger info: " + err.message);
     }
 }
 
-// 3. Snap photo with stamped coordinates
 function captureLiveEvidence() {
     const video = document.getElementById('liveFeed');
     const canvas = document.getElementById('photoCanvas');
     const status = document.getElementById('snapStatus');
 
     if (!video.videoWidth) {
-        alert("Please start the camera first.");
+        alert("Camera start ho raha hai, kripya 1 second rukein...");
+        initLiveCamera();
         return;
     }
 
@@ -273,22 +274,26 @@ function captureLiveEvidence() {
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     
-    // Draw current camera frame
+    // Draw current frame
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Overlay GPS coordinates badge onto the canvas image itself
+    // Overlay GPS coordinates directly on image
     ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
-    ctx.font = "20px Monospace";
+    ctx.fillRect(0, canvas.height - 45, canvas.width, 45);
+    ctx.font = "18px Monospace";
     ctx.fillStyle = "#38bdf8";
-    const stamp = `LAT: ${currentLat || 'N/A'} | LNG: ${currentLng || 'N/A'} | ${new Date().toISOString()}`;
-    ctx.fillText(stamp, 20, canvas.height - 18);
+    const stamp = `LAT: ${currentLat || 'N/A'} | LNG: ${currentLng || 'N/A'} | CIVIC-AI LIVE EVIDENCE`;
+    ctx.fillText(stamp, 15, canvas.height - 16);
 
-    // Export base64 data for upload
-    const base64Data = canvas.toDataURL('image/jpeg', 0.9);
-    document.getElementById('capturedImageData').value = base64Data;
+    // Convert Canvas to Blob and attach to damage_media file input so Flask AI reads it
+    canvas.toBlob(function(blob) {
+        const file = new File([blob], `evidence_${Date.now()}.jpg`, { type: "image/jpeg" });
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        document.getElementById('damageMediaInput').files = dataTransfer.files;
 
-    status.innerHTML = `<span class="text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Evidence Captured! Lat: ${currentLat}, Lng: ${currentLng} locked.</span>`;
+        status.innerHTML = `<span class="text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Image & Coordinates Stamped! Ready for AI Analysis.</span>`;
+    }, 'image/jpeg', 0.95);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
