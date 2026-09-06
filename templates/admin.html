@@ -143,14 +143,16 @@
                     </td>
 
                     <!-- Citizen Evidence Image Thumbnail -->
-                    <!-- CITIZEN EVIDENCE -->
+                    <!-- CITIZEN EVIDENCE (ONLY LIVE CAPTURED PHOTO) -->
                     <td class="align-middle text-center">
                         {% if c.damage_media and c.damage_media != '' and c.damage_media != 'None' %}
-                            <a href="/static/uploads/{{ c.damage_media }}" target="_blank">
-                                <img src="/static/uploads/{{ c.damage_media }}" alt="Evidence" class="evidence-img" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1.5px solid #38bdf8;">
+                            <a href="/static/uploads/{{ c.damage_media }}" target="_blank" title="Click to view citizen evidence">
+                                <img src="/static/uploads/{{ c.damage_media }}" 
+                                     alt="Citizen Evidence" 
+                                     style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1.5px solid #38bdf8; box-shadow: 0 0 8px rgba(56,189,248,0.4);">
                             </a>
                         {% else %}
-                            <img src="https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=100&auto=format&fit=crop&q=60" alt="Evidence" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid #64748b; opacity: 0.85;" title="Ground Evidence Photo">
+                            <span class="badge bg-secondary text-white-50" style="font-size: 10px;">No File</span>
                         {% endif %}
                     </td>
 
