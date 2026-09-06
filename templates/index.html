@@ -137,25 +137,23 @@
 
             <!-- 1. Complaint Description -->
             <div class="mb-3">
-                <label class="form-label small fw-bold text-white">
-                    <i class="fa-solid fa-pen-to-square text-info me-1"></i> Grievance Details
-                </label>
-                <textarea class="form-control" name="complaint" rows="3" placeholder="Describe the issue (e.g., Pothole on main road, broken street light, overflowing garbage)..." required></textarea>
-            </div>
-
-            <!-- 2. Target Department -->
+                <!-- Dynamic Auto-Assigned Department & Officer Target -->
             <div class="mb-3">
-                <label class="form-label small fw-bold text-white">
-                    <i class="fa-solid fa-building-flag text-warning me-1"></i> Relevant Department
+                <label class="form-label small fw-bold text-white mb-1">
+                    <i class="fa-solid fa-building-shield text-info me-1"></i> Auto-Assigned Department &amp; Officer Target
                 </label>
-                <select class="form-select" name="department">
-                    <option value="auto" selected>Auto-Detect via AI Engine</option>
-                    <option value="Roads & Transport">Roads & Transport Department</option>
-                    <option value="Sanitation & Waste">Sanitation & Municipal Waste</option>
-                    <option value="Water Supply">Water Supply & Drainage</option>
-                    <option value="Electricity Board">Electricity & Street Lighting</option>
-                    <option value="Public Safety">Public Safety & Municipal Authority</option>
-                </select>
+                <div class="p-2 rounded border border-secondary" style="background: rgba(15, 23, 42, 0.85);">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-secondary small">Detected Department:</span>
+                        <span id="display_dept" class="badge bg-primary text-white font-monospace">Roads & Public Works</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-secondary small"><i class="fa-solid fa-envelope text-warning me-1"></i> Target Officer Email:</span>
+                        <span id="display_officer_email" class="text-info font-monospace small fw-bold">pwd.executive.engineer@civicai.gov.in</span>
+                    </div>
+                </div>
+                <input type="hidden" name="department" id="input_department" value="Roads & Public Works">
+            </div>
             </div>
 
             
@@ -306,5 +304,42 @@ window.addEventListener('DOMContentLoaded', () => {
     initLiveCamera();
 });
 </script>
+
+<script>
+    const DEPT_MAP = [
+        { keywords: ["water", "pipe", "leak", "sewer", "drain", "drainage", "overflow", "gutter", "tap"], dept: "Water & Sanitation", email: "water.sanitation.je@civicai.gov.in" },
+        { keywords: ["garbage", "trash", "waste", "dump", "bin", "smell", "dirt", "sweeper", "cleaning"], dept: "Sanitation & Waste Management", email: "sanitation.inspector@civicai.gov.in" },
+        { keywords: ["light", "streetlight", "pole", "electric", "wire", "power", "spark", "transformer", "dark"], dept: "Electricity & Street Lighting", email: "electricity.nodal@civicai.gov.in" },
+        { keywords: ["encroachment", "illegal", "hawker", "parking", "footpath", "block"], dept: "Town Planning & Enforcement", email: "townplanning.officer@civicai.gov.in" },
+        { keywords: ["road", "pothole", "tar", "path", "street", "broken road", "asphalt", "traffic"], dept: "Roads & Public Works", email: "pwd.executive.engineer@civicai.gov.in" }
+    ];
+
+    const descField = document.querySelector('textarea[name="description"]') || document.getElementById('description') || document.querySelector('textarea');
+    const dispDept = document.getElementById('display_dept');
+    const dispMail = document.getElementById('display_officer_email');
+    const hidDept = document.getElementById('input_department');
+
+    if (descField && dispDept && dispMail) {
+        descField.addEventListener('input', function() {
+            const txt = this.value.toLowerCase();
+            let matched = false;
+            for (let item of DEPT_MAP) {
+                if (item.keywords.some(k => txt.includes(k))) {
+                    dispDept.textContent = item.dept;
+                    dispMail.textContent = item.email;
+                    if (hidDept) hidDept.value = item.dept;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched && txt.trim().length === 0) {
+                dispDept.textContent = "Roads & Public Works";
+                dispMail.textContent = "pwd.executive.engineer@civicai.gov.in";
+                if (hidDept) hidDept.value = "Roads & Public Works";
+            }
+        });
+    }
+</script>
+
 </body>
 </html>

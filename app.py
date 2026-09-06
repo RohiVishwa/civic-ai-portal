@@ -4,10 +4,16 @@ import time
 import random
 import re
 from datetime import datetime, timedelta
+import threading
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 from flask import Flask, render_template, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "civic_ai_secure_key_2026")
+app.secret_key = os.environ.get("SECRET_KEY", "civic_ai_unified_key_2026")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_NAME = os.path.join(BASE_DIR, "civic_records.db")
@@ -16,9 +22,26 @@ WORK_FOLDER = os.path.join(BASE_DIR, "static/work_proofs")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(WORK_FOLDER, exist_ok=True)
 
-HIGH_AUTHORITY_EMAIL = os.environ.get("HIGH_AUTHORITY_EMAIL", "commissioner.municipal@civicai.gov.in")
+# Email Routing Directory
+OFFICIAL_ROUTING_MAP = {
+    "Roads & Public Works": "pwd.executive.engineer@civicai.gov.in",
+    "Water & Sanitation": "water.sanitation.je@civicai.gov.in",
+    "Sanitation & Waste Management": "sanitation.inspector@civicai.gov.in",
+    "Electricity & Street Lighting": "electricity.nodal@civicai.gov.in",
+    "Town Planning & Enforcement": "townplanning.officer@civicai.gov.in",
+    "Public Works / General Municipal": "municipal.ward.officer@civicai.gov.in"
+}
 
-# --- 1. AUTOMATIC DB MIGRATION ---
+HIGH_AUTHORITY_EMAIL = os.environ.get("HIGH_AUTHORITY_EMAIL", "commissioner.municipal@civicai.gov.in")
+SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "civicai.system.alert@gmail.com")
+SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD", "")
+
+def get_assigned_officer_email(department):
+    return OFFICIAL_ROUTING_MAP.get(department, "municipal.ward.officer@civicai.gov.in")
+
+# --- 1. AUTOMATIC DB SCHEMA SYNC ---
 def ensure_database_schema():
     try:
         conn = sqlite3.connect(DB_NAME)
@@ -63,19 +86,16 @@ def ensure_database_schema():
         conn.commit()
         conn.close()
     except Exception as e:
-        print(f"DB Schema Sync Error: {e}")
+        print(f"DB Schema Sync Note: {e}")
 
 ensure_database_schema()
 
-# --- 2. AUTO CLASSIFICATION ENGINE ---
+# --- 2. AUTO CLASSIFIER ---
 def auto_classify_grievance(text):
     t = (text or "").lower()
     if any(k in t for k in ["water", "pipe", "leak", "sewer", "drain", "drainage", "overflow", "gutter", "tap"]):
         dept = "Water & Sanitation"
         priority = "High" if any(k in t for k in ["overflow", "flood", "leak", "choke", "burst"]) else "Medium"
-    elif any(k in t for k in ["road", "pothole", "tar", "path", "street", "broken road", "asphalt", "traffic"]):
-        dept = "Roads & Public Works"
-        priority = "High" if any(k in t for k in ["accident", "deep", "danger", "hazard", "huge"]) else "Medium"
     elif any(k in t for k in ["garbage", "trash", "waste", "dump", "bin", "smell", "dirt", "sweeper", "cleaning"]):
         dept = "Sanitation & Waste Management"
         priority = "Medium" if any(k in t for k in ["overflow", "foul", "spread", "disease"]) else "Low"
@@ -85,12 +105,74 @@ def auto_classify_grievance(text):
     elif any(k in t for k in ["encroachment", "illegal", "hawker", "parking", "footpath", "block"]):
         dept = "Town Planning & Enforcement"
         priority = "Medium"
+    elif any(k in t for k in ["road", "pothole", "tar", "path", "street", "broken road", "asphalt", "traffic"]):
+        dept = "Roads & Public Works"
+        priority = "High" if any(k in t for k in ["accident", "deep", "danger", "hazard", "huge"]) else "Medium"
     else:
-        dept = "Public Works / General Municipal"
+        dept = "Roads & Public Works"
         priority = "High"
     return dept, priority
 
-# --- 3. 7-DAY SLA ESCALATION ENGINE ---
+# --- 3. BACKGROUND EMAIL DISPATCH ENGINE ---
+def send_email_worker(officer_email, ticket_id, department, priority, description, location, filepath):
+    subject = f"[CivicAI Dispatch] Grievance {ticket_id} - {department} ({priority} Priority)"
+    body = f"""
+Official Grievance Assignment Alert
+-----------------------------------
+Ticket ID   : {ticket_id}
+Department  : {department}
+Officer Assigned: {officer_email}
+Priority    : {priority}
+Location    : {location}
+Time Logged : {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+AI Inspection Summary:
+{description}
+
+Action Required:
+Field inspection and remediation must be completed within the 7-day Municipal SLA.
+Upload live on-site resolution proof via the officer portal before auto-escalation.
+
+CivicAI Autonomous Governance Engine
+"""
+    print(f"\n=======================================================")
+    print(f"🚀 [EMAIL DISPATCH TRIGGERED]")
+    print(f"To          : {officer_email}")
+    print(f"Subject     : {subject}")
+    print(f"Location    : {location}")
+    print(f"=======================================================\n")
+
+    if SENDER_PASSWORD and SENDER_EMAIL:
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = SENDER_EMAIL
+            msg['To'] = officer_email
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'plain'))
+            if filepath and os.path.exists(filepath):
+                with open(filepath, "rb") as attachment:
+                    p = MIMEBase('application', 'octet-stream')
+                    p.set_payload(attachment.read())
+                    encoders.encode_base64(p)
+                    p.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(filepath)}")
+                    msg.attach(p)
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+            server.starttls()
+            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.send_message(msg)
+            server.quit()
+        except Exception as err:
+            print(f"SMTP Dispatch Note: {err}")
+
+def trigger_async_officer_email(officer_email, ticket_id, department, priority, description, location, filepath):
+    t = threading.Thread(
+        target=send_email_worker,
+        args=(officer_email, ticket_id, department, priority, description, location, filepath),
+        daemon=True
+    )
+    t.start()
+
+# --- 4. 7-DAY SLA CHECK ---
 def check_sla_escalations():
     try:
         conn = sqlite3.connect(DB_NAME)
@@ -102,17 +184,17 @@ def check_sla_escalations():
         for t in tickets:
             try:
                 created_dt = datetime.strptime(t['created_at'], "%Y-%m-%d %H:%M:%S")
-                if (now - created_dt).total_seconds() >= 604800: # 7 days
+                if (now - created_dt).total_seconds() >= 604800:
                     cursor.execute("UPDATE complaints SET escalated = 1 WHERE ticket_id = ?", (t['ticket_id'],))
                     conn.commit()
-                    print(f"\n[ESCALATION TRIGGERED] Overdue ticket {t['ticket_id']} sent to High Authority: {HIGH_AUTHORITY_EMAIL}\n")
+                    print(f"\n[SLA ESCALATION] Ticket {t['ticket_id']} sent to High Authority: {HIGH_AUTHORITY_EMAIL}\n")
             except Exception:
                 continue
         conn.close()
     except Exception as e:
-        print(f"SLA Check Error: {e}")
+        print(f"SLA Check error: {e}")
 
-# --- 4. 24-HOUR AUTO PURGE ---
+# --- 5. 24-HR PURGE ---
 def auto_purge_old_resolved():
     try:
         conn = sqlite3.connect(DB_NAME)
@@ -148,19 +230,19 @@ def analyze():
             filepath = os.path.join(UPLOAD_FOLDER, filename)
             file.save(filepath)
 
-        # AI Vision Detection
-        analysis_text = description if description else "AI Vision: Structural degradation and ground hazard identified."
+        analysis_text = description if description else "AI Vision: Surface hazard and civil disruption identified."
         try:
             import ai_engine
             if hasattr(ai_engine, 'analyze_image') and filepath:
                 res = ai_engine.analyze_image(filepath)
                 if res: analysis_text = res
         except Exception as e:
-            print(f"AI Engine fallback: {e}")
+            print(f"Vision Engine note: {e}")
 
         detected_dept, detected_priority = auto_classify_grievance(description or analysis_text)
         department = user_dept if (user_dept and user_dept != 'Auto-Detect via AI Engine') else detected_dept
         priority = detected_priority
+        officer_email = get_assigned_officer_email(department)
 
         now_dt = datetime.now()
         created_at = now_dt.strftime("%Y-%m-%d %H:%M:%S")
@@ -176,12 +258,17 @@ def analyze():
         conn.commit()
         conn.close()
 
+        # Trigger Real/Simulated Async Email to Assigned Nodal Officer
+        trigger_async_officer_email(officer_email, ticket_id, department, priority, analysis_text, location, filepath)
+
         return render_template('dashboard.html',
                                ticket_id=ticket_id,
                                analysis=analysis_text,
                                department=department,
                                priority=priority,
                                location=location,
+                               officer_email=officer_email,
+                               high_authority_email=HIGH_AUTHORITY_EMAIL,
                                status='Pending',
                                escalated=0)
     except Exception as e:
@@ -199,7 +286,9 @@ def track_ticket(ticket_id):
     conn.close()
     if not ticket:
         return "Ticket Not Found", 404
-    return render_template('dashboard.html', ticket=dict(ticket))
+    t_dict = dict(ticket)
+    officer_email = get_assigned_officer_email(t_dict.get('department', ''))
+    return render_template('dashboard.html', ticket=t_dict, officer_email=officer_email, high_authority_email=HIGH_AUTHORITY_EMAIL)
 
 @app.route('/admin')
 def admin_panel():

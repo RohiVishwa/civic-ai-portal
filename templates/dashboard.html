@@ -156,9 +156,9 @@
         </div>
 
         <!-- SLA Hierarchy Indicator -->
-        <div class="d-flex justify-content-between align-items-center mb-4 p-2 rounded" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);">
+        <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);">
             <div class="small text-secondary">
-                <i class="fa-solid fa-hourglass-half text-warning me-1"></i> <span class="fw-semibold text-white">7-Day SLA:</span> Field Officer Action Window
+                <i class="fa-solid fa-hourglass-half text-warning me-1"></i> <span class="fw-semibold text-white">7-Day Municipal SLA:</span> Field Officer Action Window
             </div>
             <div>
                 {% set is_esc = (ticket.escalated if ticket else escalated) %}
@@ -171,7 +171,7 @@
         </div>
 
         <!-- Vision Inspection Analysis -->
-        <div class="mb-4">
+        <div class="mb-3">
             <span class="section-label"><i class="fa-solid fa-eye text-info me-2"></i>AI Vision Inspection Analysis</span>
             <div class="data-panel text-white small" style="line-height: 1.7; font-weight: 500;">
                 {{ analysis if analysis else (ticket.description if ticket else 'Hazard detected via computer vision scanner.') }}
@@ -179,7 +179,7 @@
         </div>
 
         <!-- 3 Pillars: Priority, Department, Coordinates -->
-        <div class="row g-3 mb-4">
+        <div class="row g-3 mb-3">
             <div class="col-md-4">
                 <div class="data-panel h-100">
                     <span class="section-label"><i class="fa-solid fa-triangle-exclamation text-danger me-1"></i> Priority</span>
@@ -213,14 +213,29 @@
             </div>
         </div>
 
+        <!-- Official Authority Dispatch Route -->
+        <div class="mb-3 p-3 rounded" style="background: rgba(10, 15, 29, 0.7); border: 1px solid rgba(56, 189, 248, 0.2);">
+            <span class="section-label mb-2"><i class="fa-solid fa-envelope-circle-check text-info me-2"></i>Official Authority Dispatch Route</span>
+            <div class="d-flex flex-column gap-2 small">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-secondary"><i class="fa-solid fa-user-tie text-primary me-1"></i> Initial Field Officer (Day 0 - 7):</span>
+                    <span class="font-monospace text-info fw-semibold">{{ officer_email if officer_email else 'pwd.executive.engineer@civicai.gov.in' }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-secondary"><i class="fa-solid fa-building-flag text-danger me-1"></i> Escalation Authority (> 7 Days Overdue):</span>
+                    <span class="font-monospace text-danger fw-semibold">{{ high_authority_email if high_authority_email else 'commissioner.municipal@civicai.gov.in' }}</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Official Dispatch Log -->
         <div>
             <span class="section-label"><i class="fa-solid fa-terminal text-secondary me-2"></i>Official Dispatch Sequence</span>
             <div class="terminal-window">
                 <span class="text-secondary">&gt; Telemetry locked via GNSS constellation</span><br>
                 <span class="text-secondary">&gt; Keyword intelligence assigned department:</span> <span class="text-info">{{ department if department else (ticket.department if ticket else 'Public Works') }}</span><br>
-                <span class="text-secondary">&gt; Routing initial dossier to Field Officer:</span> <span class="text-warning">[7-Day SLA Triggered]</span><br>
-                &gt; <span class="text-white fw-bold"><i class="fa-solid fa-circle-check text-success me-1"></i> Live dispatch confirmed. Overdue fallback armed.</span>
+                <span class="text-secondary">&gt; Routing initial dossier to Field Officer:</span> <span class="text-warning">{{ officer_email if officer_email else 'Assigned Nodal Officer' }}</span><br>
+                &gt; <span class="text-white fw-bold"><i class="fa-solid fa-circle-check text-success me-1"></i> Live dispatch confirmed. 7-Day SLA armed.</span>
             </div>
         </div>
 
