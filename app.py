@@ -25,6 +25,40 @@ os.makedirs(CITIZEN_FOLDER, exist_ok=True)
 os.makedirs(WORK_FOLDER, exist_ok=True)
 
 DB_NAME = "civic_records.db"
+
+# --- AUTOMATIC SCHEMA MIGRATION (Runs on Render & Local) ---
+def ensure_database_schema():
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(complaints)")
+        existing_cols = [row[1] for row in cursor.fetchall()]
+        
+        required_cols = {
+            "damage_media": "TEXT",
+            "damage_media_type": "TEXT DEFAULT 'image'",
+            "resolution_media": "TEXT",
+            "resolution_media_type": "TEXT",
+            "location": "TEXT",
+            "department": "TEXT",
+            "priority": "TEXT DEFAULT 'High'",
+            "status": "TEXT DEFAULT 'Pending'",
+            "created_at": "TEXT"
+        }
+        
+        for col, col_type in required_cols.items():
+            if col not in existing_cols:
+                print(f"Auto-Migrating: Adding missing column '{col}' to Render DB...")
+                cursor.execute(f"ALTER TABLE complaints ADD COLUMN {col} {col_type}")
+                
+        conn.commit()
+        conn.close()
+        print("✓ Database schema verified and synchronized!")
+    except Exception as e:
+        print(f"Schema verification note: {e}")
+
+ensure_database_schema()
+# -----------------------------------------------------------
 VIDEO_EXTENSIONS = ('.mp4', '.mov', '.avi', '.mkv', '.webm')
 
 # =====================================================================
