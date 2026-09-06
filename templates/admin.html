@@ -132,10 +132,14 @@
                         <span class="badge bg-dark text-info border border-info border-opacity-50 font-monospace">{{ c.department }}</span>
                     </td>
 
-                    <td>
-                        {% if c.priority == 'Critical' or c.priority == 'High' %}
+                    <!-- PRIORITY -->
+                    <td class="align-middle">
+                        {% set p = (c.priority|string|upper) if c.priority else 'HIGH' %}
+                        {% if 'CRIT' in p %}
+                            <span class="badge bg-danger bg-opacity-25 text-danger border border-danger">CRITICAL</span>
+                        {% elif 'HIGH' in p %}
                             <span class="badge bg-danger bg-opacity-25 text-danger border border-danger">HIGH</span>
-                        {% elif c.priority == 'Medium' %}
+                        {% elif 'MED' in p %}
                             <span class="badge bg-warning bg-opacity-25 text-warning border border-warning">MEDIUM</span>
                         {% else %}
                             <span class="badge bg-info bg-opacity-25 text-info border border-info">LOW</span>
