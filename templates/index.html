@@ -199,8 +199,14 @@
         <div id="snapStatus" class="text-center small text-secondary mt-1">
             Click 'Snap & Scan with GPS' to lock satellite location and run AI Triage.
         </div>
-    </div>
-</div>
+    
+        <!-- AI Analysis & Submit Dispatch Button -->
+        <div class="mt-3">
+            <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-2 fw-bold shadow-sm" style="font-size: 15px; border-radius: 8px;">
+                <i class="fa-solid fa-bolt me-2"></i> Process Grievance & Dispatch via AI
+            </button>
+        </div>
+    </form>
 
 <!-- Hidden inputs for backend coordinates -->
 <input type="hidden" name="location" id="locationInput">
