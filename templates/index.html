@@ -158,122 +158,142 @@
                 </select>
             </div>
 
-            <!-- Live Evidence Camera with Satellite GPS -->
+            
+
+
+<!-- Live Evidence Camera with Satellite GPS Coordinates -->
 <div class="mb-3">
     <label class="form-label small fw-bold text-white">
-        <i class="fa-solid fa-camera text-primary me-1"></i> Live Evidence (Photo / Video)
+        <i class="fa-solid fa-camera text-primary me-1"></i> Live Evidence Capture (Mandatory GPS Satellite Lock)
     </label>
-    <input type="file" 
-           name="damage_media" 
-           id="liveCameraInput" 
-           class="form-control" 
-           accept="image/*,video/*" 
-           capture="environment" 
-           required 
-           onchange="fetchSatelliteLock(this)">
-    <div class="mt-2" id="gpsSatelliteStatus" style="font-size: 12px; color: #94a3b8;">
-        <i class="fa-solid fa-satellite text-info me-1"></i> Satellite GPS: Click photo/video to lock coordinates automatically
+
+    <div class="p-3 rounded" style="background: rgba(15, 23, 42, 0.7); border: 1px dashed #3b82f6;">
+        <!-- Live Video Viewfinder -->
+        <div class="position-relative mb-2" style="max-width: 420px; margin: 0 auto; border-radius: 8px; overflow: hidden; background: #000;">
+            <video id="liveFeed" autoplay playsinline style="width: 100%; height: 260px; object-fit: cover; display: block;"></video>
+            <canvas id="photoCanvas" style="display: none;"></canvas>
+            
+            <!-- Live Coordinate HUD Overlay -->
+            <div id="liveHud" class="position-absolute bottom-0 start-0 w-100 p-2 text-start" 
+                 style="background: linear-gradient(transparent, rgba(0,0,0,0.85)); font-size: 11px; font-family: monospace; color: #38bdf8;">
+                <i class="fa-solid fa-satellite-dish fa-fade text-warning me-1"></i>
+                <span id="coordsDisplay">Satellite GPS: Acquiring Lock...</span>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-center gap-2 mb-2">
+            <button type="button" class="btn btn-sm btn-outline-info" onclick="initLiveCamera()">
+                <i class="fa-solid fa-arrows-rotate me-1"></i> Start / Switch Camera
+            </button>
+            <button type="button" class="btn btn-sm btn-success fw-bold" onclick="captureLiveEvidence()">
+                <i class="fa-solid fa-circle-dot me-1"></i> Snap Photo with GPS
+            </button>
+        </div>
+
+        <div id="snapStatus" class="text-center small text-secondary mt-1">
+            Click 'Snap Photo' to freeze frame and stamp latitude & longitude.
+        </div>
     </div>
 </div>
 
-<!-- Hidden coordinates for backend -->
+<!-- Hidden inputs sent directly to Flask backend -->
+<input type="hidden" name="captured_image_data" id="capturedImageData">
 <input type="hidden" name="location" id="locationInput">
 <input type="hidden" name="latitude" id="latitudeInput">
 <input type="hidden" name="longitude" id="longitudeInput">
 
-            <!-- Submit Button -->
-            <button type="submit" class="btn btn-submit w-100 text-white shadow-lg">
-                <i class="fa-solid fa-bolt me-1"></i> Process Grievance & Dispatch
-            </button>
-        </form>
-    </div>
-</div>
-
 <script>
-// Live Media Upload & Satellite GPS Sync
-function handleLiveMediaUpload(input) {
-    const statusDiv = document.getElementById('mediaGpsStatus');
-    const uploadText = document.getElementById('uploadText');
+let streamTrack = null;
+let currentLat = null;
+let currentLng = null;
+let gpsLocked = false;
+
+// 1. Acquire high-accuracy GPS coordinates continuously
+function trackGpsSatellite() {
+    if ("geolocation" in navigator) {
+        navigator.geolocation.watchPosition(
+            function(pos) {
+                currentLat = pos.coords.latitude.toFixed(6);
+                currentLng = pos.coords.longitude.toFixed(6);
+                gpsLocked = true;
+                
+                document.getElementById('latitudeInput').value = currentLat;
+                document.getElementById('longitudeInput').value = currentLng;
+                document.getElementById('locationInput').value = `${currentLat}, ${currentLng}`;
+                
+                const hud = document.getElementById('coordsDisplay');
+                if (hud) {
+                    hud.innerHTML = `LAT: ${currentLat} | LNG: ${currentLng} (±${Math.round(pos.coords.accuracy)}m)`;
+                    hud.style.color = "#4ade80";
+                }
+            },
+            function(err) {
+                const hud = document.getElementById('coordsDisplay');
+                if (hud) {
+                    hud.innerHTML = "GPS Permission Blocked. Please Allow Location Access.";
+                    hud.style.color = "#f87171";
+                }
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+}
+
+// 2. Launch Camera Stream
+async function initLiveCamera() {
+    try {
+        if (streamTrack) {
+            streamTrack.getTracks().forEach(t => t.stop());
+        }
+        const video = document.getElementById('liveFeed');
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+        });
+        streamTrack = stream;
+        video.srcObject = stream;
+        trackGpsSatellite();
+    } catch (err) {
+        alert("Camera access denied or unavailable: " + err.message);
+    }
+}
+
+// 3. Snap photo with stamped coordinates
+function captureLiveEvidence() {
+    const video = document.getElementById('liveFeed');
+    const canvas = document.getElementById('photoCanvas');
+    const status = document.getElementById('snapStatus');
+
+    if (!video.videoWidth) {
+        alert("Please start the camera first.");
+        return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
     
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        if (uploadText) {
-            uploadText.innerText = "Selected: " + file.name;
-        }
-        
-        if (statusDiv) {
-            statusDiv.style.display = "block";
-            statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-warning me-1"></i> Fetching satellite GPS coordinates...';
-        }
-        
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    const lat = position.coords.latitude.toFixed(6);
-                    const lng = position.coords.longitude.toFixed(6);
-                    const acc = Math.round(position.coords.accuracy);
+    // Draw current camera frame
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                    const latInput = document.getElementById('latitudeInput');
-                    const lngInput = document.getElementById('longitudeInput');
-                    const locInput = document.getElementById('locationInput');
+    // Overlay GPS coordinates badge onto the canvas image itself
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+    ctx.font = "20px Monospace";
+    ctx.fillStyle = "#38bdf8";
+    const stamp = `LAT: ${currentLat || 'N/A'} | LNG: ${currentLng || 'N/A'} | ${new Date().toISOString()}`;
+    ctx.fillText(stamp, 20, canvas.height - 18);
 
-                    if (latInput) latInput.value = lat;
-                    if (lngInput) lngInput.value = lng;
-                    if (locInput) locInput.value = `${lat}, ${lng}`;
+    // Export base64 data for upload
+    const base64Data = canvas.toDataURL('image/jpeg', 0.9);
+    document.getElementById('capturedImageData').value = base64Data;
 
-                    if (statusDiv) {
-                        statusDiv.innerHTML = `<span class="text-success fw-bold"><i class="fa-solid fa-satellite-dish me-1"></i> GPS Locked: ${lat}, ${lng} (±${acc}m accuracy)</span>`;
-                    }
-                },
-                function(error) {
-                    if (statusDiv) {
-                        statusDiv.innerHTML = '<span class="text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> Location permission denied. Please enable GPS.</span>';
-                    }
-                },
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-            );
-        } else {
-            if (statusDiv) {
-                statusDiv.innerHTML = '<span class="text-danger">Geolocation not supported on this device.</span>';
-            }
-        }
-    }
+    status.innerHTML = `<span class="text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Evidence Captured! Lat: ${currentLat}, Lng: ${currentLng} locked.</span>`;
 }
-<script>
-function fetchSatelliteLock(inputElement) {
-    const statusBox = document.getElementById('gpsSatelliteStatus');
-    if (inputElement.files && inputElement.files.length > 0) {
-        if (statusBox) {
-            statusBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary me-1"></i> Connecting to GPS Satellites... Locking live position...';
-        }
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    const lat = position.coords.latitude.toFixed(6);
-                    const lng = position.coords.longitude.toFixed(6);
-                    const accuracy = Math.round(position.coords.accuracy);
 
-                    const latEl = document.getElementById('latitudeInput');
-                    const lngEl = document.getElementById('longitudeInput');
-                    const locEl = document.getElementById('locationInput');
-                    if (latEl) latEl.value = lat;
-                    if (lngEl) lngEl.value = lng;
-                    if (locEl) locEl.value = `${lat}, ${lng}`;
-
-                    if (statusBox) {
-                        statusBox.innerHTML = `<span class="text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Satellite Locked: Lat ${lat}, Lng ${lng} (±${accuracy}m accuracy)</span>`;
-                    }
-                },
-                function(error) {
-                    if (statusBox) {
-                        statusBox.innerHTML = '<span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i> GPS permission blocked. Please allow browser location access.</span>';
-                    }
-                },
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-            );
-        }
-    }
-}
+window.addEventListener('DOMContentLoaded', () => {
+    initLiveCamera();
+});
 </script>
 </body>
 </html>
