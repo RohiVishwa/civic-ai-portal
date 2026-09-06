@@ -290,18 +290,27 @@
 
                         <!-- Actions -->
                         <td>
-                            {% if c.status != 'Resolved' %}
-                                <div class="d-flex gap-1">
-                                    <a href="/resolve/{{ c.ticket_id }}" class="btn btn-success btn-sm fw-bold">
-                                        <i class="fa-solid fa-cloud-arrow-up me-1"></i> Upload Proof
-                                    </a>
-                                    <a href="/deny/{{ c.ticket_id }}" class="btn btn-danger btn-sm" onclick="return confirm('Kya aap is ticket ko Deny karke delete karna chahte hain?');">
-    <i class="fa-solid fa-trash me-1"></i> Deny
-</a>
-                                </div>
-                            {% else %}
-                                <span class="text-success small fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Closed</span>
-                            {% endif %}
+                            {% if c.status == 'Pending' %}
+        <div class="d-flex gap-1">
+            <a href="/resolve/{{ c.ticket_id }}" class="btn btn-warning btn-sm fw-bold">
+                <i class="fa-solid fa-clipboard-check me-1"></i> Upload Proof
+            </a>
+            <a href="/deny/{{ c.ticket_id }}" class="btn btn-danger btn-sm">
+                <i class="fa-solid fa-trash me-1"></i> Deny
+            </a>
+        </div>
+    {% elif c.status == 'Under Inspection' or c.status == 'In Progress' %}
+        <div class="d-flex gap-1">
+            <a href="/mark_resolved/{{ c.ticket_id }}" class="btn btn-success btn-sm fw-bold">
+                <i class="fa-solid fa-circle-check me-1"></i> Confirm & Resolve
+            </a>
+            <a href="/deny/{{ c.ticket_id }}" class="btn btn-danger btn-sm">
+                <i class="fa-solid fa-trash me-1"></i> Deny
+            </a>
+        </div>
+    {% else %}
+        <span class="text-success small fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Resolved</span>
+    {% endif %}
                         </td>
                     </tr>
                     {% else %}

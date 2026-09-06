@@ -609,39 +609,70 @@ def resolve_ticket(ticket_id):
 
     return redirect('/admin')
 
-# --- Deny & Delete Action ---
+# --- Auto Purge (24 Hours Rule) & Deny Action ---
+def auto_purge_deleted_tickets():
+    """24 ghante (86400 seconds) se purani denied tickets ko database se permanently hatata hai"""
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS deleted_complaints (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticket_id TEXT UNIQUE,
+                description TEXT,
+                department TEXT,
+                deleted_at REAL
+            )
+        ''')
+        cutoff = time.time() - 86400
+        cursor.execute("DELETE FROM deleted_complaints WHERE deleted_at < ?", (cutoff,))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Purge error: {e}")
+
 @app.route('/deny/<ticket_id>')
 @app.route('/deny_ticket/<ticket_id>')
 def deny_ticket(ticket_id):
-    if 'user' not in session:
-        return redirect('/login')
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # 1. Image/Media file name fetch karke upload folder se safely delete karein
-    cursor.execute("SELECT media_name, image_name FROM complaints WHERE ticket_id = ?", (ticket_id,))
-    row = cursor.fetchone()
-    if row:
-        for key in ['media_name', 'image_name']:
-            if key in row.keys() and row[key]:
-                fname = row[key]
-                for folder in [CITIZEN_FOLDER, WORK_FOLDER, UPLOAD_FOLDER]:
-                    fpath = os.path.join(folder, fname)
-                    if os.path.exists(fpath):
-                        try:
-                            os.remove(fpath)
-                        except OSError:
-                            pass
-                            
-    # 2. Complaints table se record permanently delete karein
-    cursor.execute("DELETE FROM complaints WHERE ticket_id = ?", (ticket_id,))
-    conn.commit()
-    conn.close()
-    
-    return redirect('/admin')
+    auto_purge_deleted_tickets()
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM complaints WHERE ticket_id = ?", (ticket_id,))
+        ticket = cursor.fetchone()
+        if ticket:
+            # 24 ghante ke liye deleted_complaints me save karein
+            cursor.execute('''
+                INSERT OR REPLACE INTO deleted_complaints (ticket_id, description, department, deleted_at)
+                VALUES (?, ?, ?, ?)
+            ''', (ticket['ticket_id'], 
+                  ticket['description'] if 'description' in ticket.keys() else '', 
+                  ticket['department'] if 'department' in ticket.keys() else '', 
+                  time.time()))
+            
+            # Active complaints list se hata dein
+            cursor.execute("DELETE FROM complaints WHERE ticket_id = ?", (ticket_id,))
+            conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error on deny: {e}")
+        
+    return redirect(request.referrer or '/admin')
 
-    return redirect('/admin')
+@app.route('/mark_resolved/<ticket_id>')
+def mark_resolved(ticket_id):
+    """Officer inspection verify karne ke baad ticket ko resolve karega"""
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE complaints SET status = 'Resolved' WHERE ticket_id = ?", (ticket_id,))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Resolution error: {e}")
+    return redirect(request.referrer or '/admin')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)
