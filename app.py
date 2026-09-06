@@ -144,8 +144,23 @@ def admin_panel():
     rows = cur.fetchall()
 
     complaints = []
+    total_active = 0
+    pending_count = 0
+    resolved_count = 0
+    denied_count = 0
+
     for r in rows:
         d = dict(r)
+        st = (d.get('status') or 'Pending').strip()
+        
+        if st == 'Resolved':
+            resolved_count += 1
+        elif st in ['Denied', 'Deleted']:
+            denied_count += 1
+        else:
+            pending_count += 1
+            total_active += 1
+
         raw_date = d.get('created_at') or ''
         try:
             if raw_date:
@@ -164,7 +179,13 @@ def admin_panel():
 
         complaints.append(d)
     conn.close()
-    return render_template('admin.html', complaints=complaints)
+
+    return render_template('admin.html',
+                           complaints=complaints,
+                           total_active=total_active,
+                           pending_count=pending_count,
+                           resolved_count=resolved_count,
+                           denied_count=denied_count)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

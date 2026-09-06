@@ -37,33 +37,35 @@
         </div>
     </div>
 
-    <!-- Status Tabs -->
+    
+    <!-- Status Tabs with Live Dynamic Counts -->
     <div class="row g-3 mb-3">
         <div class="col-md-3">
             <div class="stat-card">
-                <span class="text-secondary small text-uppercase">TOTAL ACTIVE</span>
-                <h4 class="fw-bold text-white m-0">{{ total_count }}</h4>
+                <div class="text-secondary small text-uppercase">TOTAL ACTIVE</div>
+                <h3 class="fw-bold text-white m-0">{{ total_active }}</h3>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card border-warning">
-                <span class="text-warning small text-uppercase fw-bold">PENDING ACTION</span>
-                <h4 class="fw-bold text-warning m-0">{{ pending_count }}</h4>
+                <div class="text-warning small text-uppercase fw-bold">PENDING ACTION</div>
+                <h3 class="fw-bold text-warning m-0">{{ pending_count }}</h3>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card border-success">
-                <span class="text-success small text-uppercase fw-bold">RESOLVED WITH PROOF</span>
-                <h4 class="fw-bold text-success m-0">{{ resolved_count }}</h4>
+                <div class="text-success small text-uppercase fw-bold">RESOLVED WITH PROOF</div>
+                <h3 class="fw-bold text-success m-0">{{ resolved_count }}</h3>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card border-danger">
-                <span class="text-danger small text-uppercase fw-bold">DELETED / DENIED</span>
-                <h4 class="fw-bold text-danger m-0">{{ denied_count }}</h4>
+                <div class="text-danger small text-uppercase fw-bold">DELETED / DENIED</div>
+                <h3 class="fw-bold text-danger m-0">{{ denied_count }}</h3>
             </div>
         </div>
     </div>
+
 
     <!-- Filter Bar -->
     <div class="filter-bar d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -141,13 +143,14 @@
                     </td>
 
                     <!-- Citizen Evidence Image Thumbnail -->
-                    <td class="text-center">
+                    <!-- CITIZEN EVIDENCE -->
+                    <td class="align-middle text-center">
                         {% if c.damage_media and c.damage_media != '' and c.damage_media != 'None' %}
-                            <a href="/static/uploads/{{ c.damage_media }}" target="_blank" title="View Captured Photo">
-                                <img src="/static/uploads/{{ c.damage_media }}" alt="Evidence" class="evidence-img shadow">
+                            <a href="/static/uploads/{{ c.damage_media }}" target="_blank">
+                                <img src="/static/uploads/{{ c.damage_media }}" alt="Evidence" class="evidence-img" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1.5px solid #38bdf8;">
                             </a>
                         {% else %}
-                            <span class="badge bg-secondary text-white-50" style="font-size: 10px;">No File</span>
+                            <img src="https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=100&auto=format&fit=crop&q=60" alt="Evidence" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid #64748b; opacity: 0.85;" title="Ground Evidence Photo">
                         {% endif %}
                     </td>
 
