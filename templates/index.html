@@ -301,5 +301,71 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
 
+
+<script>
+// --- ROBUST GRIEVANCE SUBMIT HANDLER ---
+document.addEventListener('DOMContentLoaded', function() {
+    const submitBtn = document.querySelector('button[type="submit"]') || 
+                      document.getElementById('processBtn') || 
+                      Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Process Grievance'));
+                      
+    const form = document.querySelector('form') || document.getElementById('grievanceForm');
+
+    if (submitBtn) {
+        submitBtn.type = "button"; // manage click manually to prevent hang
+        submitBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Check if photo is snapped, if not try auto-snapping current camera frame
+            const video = document.querySelector('video') || document.getElementById('video');
+            const fileInput = document.querySelector('input[type="file"]') || document.getElementById('damage_media');
+            
+            // Show processing state on button
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Analyzing &amp; Dispatching...';
+
+            if (video && video.srcObject && (!fileInput || !fileInput.files || fileInput.files.length === 0)) {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth || 640;
+                    canvas.height = video.videoHeight || 480;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    canvas.toBlob(function(blob) {
+                        const file = new File([blob], "evidence_auto.jpg", { type: "image/jpeg" });
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        
+                        let targetInput = document.getElementById('damage_media');
+                        if (!targetInput) {
+                            targetInput = document.createElement('input');
+                            targetInput.type = 'file';
+                            targetInput.name = 'damage_media';
+                            targetInput.id = 'damage_media';
+                            targetInput.style.display = 'none';
+                            form.appendChild(targetInput);
+                        }
+                        targetInput.files = dataTransfer.files;
+                        form.submit();
+                    }, 'image/jpeg');
+                    return;
+                } catch(err) {
+                    console.log("Canvas snap fallback:", err);
+                }
+            }
+
+            // Standard direct form submission
+            if (form) {
+                form.submit();
+            } else {
+                // Fallback submit
+                document.forms[0].submit();
+            }
+        });
+    }
+});
+</script>
+
 </body>
 </html>
