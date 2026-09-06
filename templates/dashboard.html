@@ -26,12 +26,12 @@
     </div>
     {% endif %}
 
-    {% if ticket %}
+    {% if ticket or ticket_id %}
     <div class="card card-custom p-4 shadow-lg">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <span class="text-secondary small">Ticket ID</span>
-                <h5 class="fw-bold text-info m-0">{{ ticket.ticket_id }}</h5>
+                <h5 class="fw-bold text-info m-0">{{ ticket.ticket_id if ticket else ticket_id }}</h5>
             </div>
             <div>
                 {% if ticket.status == 'Pending' %}
@@ -41,7 +41,7 @@
                 {% elif ticket.status == 'Resolved' %}
                     <span class="badge bg-success px-3 py-2 rounded-pill"><i class="fa-solid fa-check-circle me-1"></i> Officially Resolved</span>
                 {% else %}
-                    <span class="badge bg-secondary px-3 py-2 rounded-pill">{{ ticket.status }}</span>
+                    <span class="badge bg-secondary px-3 py-2 rounded-pill">{{ ticket.status if ticket else 'Pending' }}</span>
                 {% endif %}
             </div>
         </div>
@@ -69,15 +69,15 @@
         <hr class="border-secondary">
         <div class="mb-2">
             <span class="text-secondary small d-block">Department Assigned</span>
-            <span class="badge bg-dark border border-secondary text-white">{{ ticket.department }}</span>
+            <span class="badge bg-dark border border-secondary text-white">{{ ticket.department if ticket else department }}</span>
         </div>
         <div class="mb-2">
             <span class="text-secondary small d-block">Reported Problem</span>
-            <p class="text-white small p-2 rounded bg-dark border border-secondary mb-1">{{ ticket.description }}</p>
+            <p class="text-white small p-2 rounded bg-dark border border-secondary mb-1">{{ ticket.description if ticket else description }}</p>
         </div>
         <div>
             <span class="text-secondary small d-block">GPS Location</span>
-            <span class="text-success small font-monospace"><i class="fa-solid fa-location-dot me-1"></i> {{ ticket.location or 'Recorded via Satellite' }}</span>
+            <span class="text-success small font-monospace"><i class="fa-solid fa-location-dot me-1"></i> {{ ticket.location if ticket else location or 'Recorded via Satellite' }}</span>
         </div>
     </div>
     {% endif %}
