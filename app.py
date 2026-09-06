@@ -221,14 +221,24 @@ def analyze():
         location = request.form.get('location', '').strip() or request.form.get('coords', '').strip() or "30.730376, 76.168847"
         user_dept = request.form.get('department', '').strip()
 
+        # Handle file upload or base64 canvas snapshot
         file = request.files.get('damage_media') or request.files.get('file') or request.files.get('image')
+        b64_data = request.form.get('image_base64', '')
         filename = ""
         filepath = ""
+
         if file and file.filename != '':
-            ext = os.path.splitext(file.filename)[1].lower()
+            ext = os.path.splitext(file.filename)[1].lower() or '.jpg'
             filename = f"evidence_{int(time.time())}{ext}"
             filepath = os.path.join(UPLOAD_FOLDER, filename)
             file.save(filepath)
+        elif b64_data and ',' in b64_data:
+            import base64
+            header, encoded = b64_data.split(',', 1)
+            filename = f"evidence_{int(time.time())}.jpg"
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            with open(filepath, "wb") as fh:
+                fh.write(base64.b64decode(encoded))
 
         analysis_text = description if description else "AI Vision: Surface hazard and civil disruption identified."
         try:
@@ -300,7 +310,28 @@ def admin_panel():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM complaints ORDER BY id DESC")
-    complaints = [dict(r) for r in cursor.fetchall()]
+    rows = cursor.fetchall()
+    
+    complaints = []
+    for r in rows:
+        d = dict(r)
+        raw_date = d.get('created_at') or ''
+        try:
+            if raw_date:
+                dt_obj = datetime.strptime(raw_date.split('.')[0], "%Y-%m-%d %H:%M:%S")
+                d['formatted_date'] = dt_obj.strftime("%d %b %Y")
+                d['formatted_day'] = dt_obj.strftime("%A")
+                d['formatted_time'] = dt_obj.strftime("%I:%M %p")
+            else:
+                d['formatted_date'] = datetime.now().strftime("%d %b %Y")
+                d['formatted_day'] = datetime.now().strftime("%A")
+                d['formatted_time'] = "Logged"
+        except Exception:
+            d['formatted_date'] = raw_date or datetime.now().strftime("%d %b %Y")
+            d['formatted_day'] = "Logged"
+            d['formatted_time'] = ""
+        complaints.append(d)
+        
     conn.close()
     return render_template('admin.html', complaints=complaints)
 
