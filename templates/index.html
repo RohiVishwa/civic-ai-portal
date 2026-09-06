@@ -115,11 +115,14 @@
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        b64Input.value = dataUrl;
-        preview.src = dataUrl;
-        video.style.display = 'none';
-        preview.style.display = 'block';
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        const b64 = document.getElementById('image_base64');
+        if (b64) b64.value = dataUrl;
+        if (preview) {
+            preview.src = dataUrl;
+            video.style.display = 'none';
+            preview.style.display = 'block';
+        }
     }
 
     document.getElementById('grievanceForm').addEventListener('submit', function() {

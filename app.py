@@ -84,13 +84,24 @@ def analyze():
         loc = request.form.get('location', '').strip() or request.form.get('coords', '').strip() or "30.730376, 76.168847"
         sel_dept = request.form.get('department', '').strip()
 
+        # Live Citizen Camera Image Save
         filename = ""
+        b64 = (request.form.get('image_base64') or '').strip()
         file = request.files.get('damage_media') or request.files.get('file') or request.files.get('image')
-        b64 = request.form.get('image_base64', '').strip()
 
-        if file and file.filename != '':
+        if b64 and ',' in b64:
+            try:
+                header, encoded = b64.split(',', 1)
+                filename = f"live_evidence_{int(time.time())}.jpg"
+                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                with open(os.path.join(UPLOAD_FOLDER, filename), "wb") as fh:
+                    fh.write(base64.b64decode(encoded))
+            except Exception as err:
+                print("Base64 save error:", err)
+        elif file and file.filename != '':
             ext = os.path.splitext(file.filename)[1].lower() or '.jpg'
-            filename = f"evidence_{int(time.time())}{ext}"
+            filename = f"live_evidence_{int(time.time())}{ext}"
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
             file.save(os.path.join(UPLOAD_FOLDER, filename))
         elif b64 and ',' in b64:
             try:
