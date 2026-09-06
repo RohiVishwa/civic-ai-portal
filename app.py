@@ -31,7 +31,7 @@ def get_assigned_officer_email(dept):
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    cur.execute('''
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS complaints (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ticket_id TEXT UNIQUE,
@@ -48,13 +48,28 @@ def init_db():
             deadline TEXT,
             escalated INTEGER DEFAULT 0
         )
-    ''')
-    # Run migration if columns are missing
+    """)
+    conn.commit()
+    
+    # Check and add any missing columns dynamically
     cur.execute("PRAGMA table_info(complaints)")
-    cols = [c[1] for c in cur.fetchall()]
-    for col_name in ['damage_media', 'damage_media_type', 'resolution_media', 'resolution_media_type']:
-        if col_name not in cols:
-            cur.execute(f"ALTER TABLE complaints ADD COLUMN {col_name} TEXT")
+    existing_cols = [c[1] for c in cur.fetchall()]
+    needed_cols = {
+        "damage_media": "TEXT",
+        "damage_media_type": "TEXT DEFAULT 'image'",
+        "resolution_media": "TEXT",
+        "resolution_media_type": "TEXT",
+        "location": "TEXT",
+        "created_at": "TEXT",
+        "deadline": "TEXT",
+        "escalated": "INTEGER DEFAULT 0"
+    }
+    for col, ctype in needed_cols.items():
+        if col not in existing_cols:
+            try:
+                cur.execute(f"ALTER TABLE complaints ADD COLUMN {col} {ctype}")
+            except Exception as e:
+                print(f"Column add note: {e}")
     conn.commit()
     conn.close()
 
