@@ -176,6 +176,17 @@ def logout():
     session.pop('admin_logged', None)
     return redirect('/login')
 
+@app.route('/deny/<ticket_id>')
+def deny_ticket(ticket_id):
+    if not session.get('admin_logged'):
+        return redirect('/login')
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("UPDATE complaints SET status = 'Denied' WHERE ticket_id = ?", (ticket_id,))
+    conn.commit()
+    conn.close()
+    return redirect('/admin')
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5001))
     app.run(host='0.0.0.0', port=port, debug=True)
