@@ -158,45 +158,28 @@
                 </select>
             </div>
 
-            <!-- 3. Spot Location & Auto GPS -->
-            <div class="mb-3">
-                <label class="form-label small fw-bold text-white d-flex justify-content-between">
-                    <span><i class="fa-solid fa-location-dot text-danger me-1"></i> Incident Location Spot</span>
-                    <span class="text-info small" style="cursor:pointer;" onclick="triggerLiveGPS()">
-                        <i class="fa-solid fa-crosshairs me-1"></i> Tag Current GPS
-                    </span>
-                </label>
-                <div class="position-relative">
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="locationInput" name="location" placeholder="Detecting live GPS or search area..." autocomplete="off" required>
-                        <button class="btn btn-outline-info" type="button" onclick="triggerLiveGPS()" title="Tag Live GPS">
-                            <i class="fa-solid fa-location-crosshairs"></i>
-                        </button>
-                    </div>
-                    <div id="suggestionsBox" class="suggestions-dropdown"></div>
-                </div>
-                
-               
-                    <span id="coordBadge" class="badge bg-dark border border-secondary text-info" style="font-size: 10px;">GPS: Waiting</span>
-                </div>
-            </div>
-
-            <!-- 4. Evidence Media Upload (Photo/Video with Live GPS Tagging) -->
-            <div class="mb-4">
-                <label class="form-label small fw-bold text-white">
-                    <i class="fa-solid fa-camera-retro text-success me-1"></i> Evidence Photo / Video
-                </label>
-                <div class="upload-box" onclick="document.getElementById('mediaFileInput').click();">
-                    <i class="fa-solid fa-cloud-arrow-up fa-2x text-secondary mb-1"></i>
-                    <div id="uploadText" class="text-white small fw-semibold">Click to capture / upload damage evidence</div>
-                    <small class="text-secondary" style="font-size: 11px;">Supports JPG, PNG, MP4, MOV (GPS automatically tags to media)</small>
-                </div>
-                <input type="file" id="mediaFileInput" name="damage_media" accept="image/*,video/*" capture="environment" style="display:none;" onchange="handleLiveMediaUpload(this)">
-                
-                <!-- GPS Tagging Notification for Media -->
-                <div id="mediaGpsStatus" class="mt-2 small text-light">
-    <i class="fa-solid fa-satellite text-info me-1"></i> Satellite GPS: Photo/Video click karte hi auto-sync hoga
+            <!-- Live Evidence Camera with Satellite GPS -->
+<div class="mb-3">
+    <label class="form-label small fw-bold text-white">
+        <i class="fa-solid fa-camera text-primary me-1"></i> Live Evidence (Photo / Video)
+    </label>
+    <input type="file" 
+           name="damage_media" 
+           id="liveCameraInput" 
+           class="form-control" 
+           accept="image/*,video/*" 
+           capture="environment" 
+           required 
+           onchange="fetchSatelliteLock(this)">
+    <div class="mt-2" id="gpsSatelliteStatus" style="font-size: 12px; color: #94a3b8;">
+        <i class="fa-solid fa-satellite text-info me-1"></i> Satellite GPS: Click photo/video to lock coordinates automatically
+    </div>
 </div>
+
+<!-- Hidden coordinates for backend -->
+<input type="hidden" name="location" id="locationInput">
+<input type="hidden" name="latitude" id="latitudeInput">
+<input type="hidden" name="longitude" id="longitudeInput">
 
             <!-- Submit Button -->
             <button type="submit" class="btn btn-submit w-100 text-white shadow-lg">
@@ -256,8 +239,41 @@ function handleLiveMediaUpload(input) {
         }
     }
 }
+<script>
+function fetchSatelliteLock(inputElement) {
+    const statusBox = document.getElementById('gpsSatelliteStatus');
+    if (inputElement.files && inputElement.files.length > 0) {
+        if (statusBox) {
+            statusBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary me-1"></i> Connecting to GPS Satellites... Locking live position...';
+        }
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude.toFixed(6);
+                    const lng = position.coords.longitude.toFixed(6);
+                    const accuracy = Math.round(position.coords.accuracy);
+
+                    const latEl = document.getElementById('latitudeInput');
+                    const lngEl = document.getElementById('longitudeInput');
+                    const locEl = document.getElementById('locationInput');
+                    if (latEl) latEl.value = lat;
+                    if (lngEl) lngEl.value = lng;
+                    if (locEl) locEl.value = `${lat}, ${lng}`;
+
+                    if (statusBox) {
+                        statusBox.innerHTML = `<span class="text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Satellite Locked: Lat ${lat}, Lng ${lng} (±${accuracy}m accuracy)</span>`;
+                    }
+                },
+                function(error) {
+                    if (statusBox) {
+                        statusBox.innerHTML = '<span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i> GPS permission blocked. Please allow browser location access.</span>';
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        }
+    }
+}
 </script>
 </body>
 </html>
-
-    

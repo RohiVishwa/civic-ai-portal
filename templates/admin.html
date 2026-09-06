@@ -320,6 +320,42 @@
             </table>
         </div>
     </div>
+    <!-- Denied / 24-Hour Purge Trash Table -->
+<div class="mt-4 p-3 rounded" style="background: rgba(220, 38, 38, 0.08); border: 1px dashed rgba(220, 38, 38, 0.4);">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="text-danger fw-bold m-0">
+            <i class="fa-solid fa-trash-can me-2"></i> Denied Complaints (Auto-Purges Permanently in 24 Hours)
+        </h6>
+        <span class="badge bg-danger">{{ deleted_logs|length if deleted_logs else 0 }} In Trash</span>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-sm table-dark table-hover m-0" style="font-size: 13px;">
+            <thead>
+                <tr class="text-secondary">
+                    <th>Ticket ID</th>
+                    <th>Department</th>
+                    <th>Description</th>
+                    <th>Retention Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in deleted_logs %}
+                <tr>
+                    <td class="fw-bold text-white">{{ d.ticket_id }}</td>
+                    <td><span class="badge bg-secondary">{{ d.department }}</span></td>
+                    <td class="text-truncate" style="max-width: 280px;">{{ d.description }}</td>
+                    <td><span class="text-danger small"><i class="fa-solid fa-clock-rotate-left me-1"></i> Queued for 24h Purge</span></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center text-secondary py-2">Trash is empty.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 
     <!-- Modal 1: Media Preview -->
     <div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">

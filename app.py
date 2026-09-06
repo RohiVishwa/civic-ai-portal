@@ -427,6 +427,8 @@ def admin_portal():
 
     cursor.execute("SELECT DISTINCT department FROM complaints WHERE department IS NOT NULL AND department != '' ORDER BY department ASC")
     all_depts = [r['department'] for r in cursor.fetchall()]
+    cursor.execute("SELECT * FROM deleted_complaints ORDER BY deleted_at DESC")
+    deleted_tickets = [dict(r) for r in cursor.fetchall()]
 
     query = "SELECT * FROM complaints WHERE 1=1"
     params = []
