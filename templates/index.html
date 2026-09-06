@@ -126,18 +126,24 @@
             </a>
         </div>
         <p class="text-secondary small m-0">Report Grievances with AI Triage & Direct Official Email Dispatch</p>
-    </div>
-
-    <div class="card-body-custom">
-        <form action="/analyze" method="POST" enctype="multipart/form-data">
-            
-            <!-- Hidden Inputs for Coordinates -->
-            <input type="hidden" id="latitudeInput" name="latitude">
-            <input type="hidden" id="longitudeInput" name="longitude">
-
-            <!-- 1. Complaint Description -->
+<!-- Citizen Problem Description Box -->
             <div class="mb-3">
-                <!-- Dynamic Auto-Assigned Department & Officer Target -->
+                <label class="form-label small fw-bold text-dark mb-1">
+                    <i class="fa-solid fa-align-left text-primary me-1"></i> Grievance Description / Citizen Notes
+                </label>
+                <textarea name="description" id="description" class="form-control" rows="3" placeholder="Describe the issue in detail (e.g. Broken water pipeline leaking near market, pothole on main road, etc.)..."></textarea>
+            </div>
+
+            <!-- Relevant Department (Auto-Detect via AI Engine) -->
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-dark mb-1">
+                    <i class="fa-solid fa-building text-primary me-1"></i> Relevant Department
+                </label>
+                <select name="department" class="form-select form-select-sm" style="pointer-events: none; background-color: #f8f9fa;">
+                    <option value="Auto-Detect via AI Engine" selected>Auto-Detect via AI Engine</option>
+                </select>
+            </div>
+
             <div class="mb-3">
                 <label class="form-label small fw-bold text-dark mb-1">
                     <i class="fa-solid fa-building text-primary me-1"></i> Relevant Department
