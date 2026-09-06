@@ -539,44 +539,6 @@ def admin_portal():
     )
 
 # --- Dedicated Work Proof Upload Page ---
-@app.route('/resolve/<ticket_id>')
-def resolve_page(ticket_id):
-    if not session.get('admin_logged'):
-        return redirect('/login')
-
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM complaints WHERE ticket_id = ?", (ticket_id,))
-    ticket = cursor.fetchone()
-    conn.close()
-
-    if not ticket:
-        return redirect('/admin')
-
-    keys = ticket.keys()
-    c_media = ticket['media_name'] if 'media_name' in keys and ticket['media_name'] else (ticket['image_name'] if 'image_name' in keys and ticket['image_name'] else None)
-    c_type = ticket['media_type'] if 'media_type' in keys and ticket['media_type'] else get_media_type(c_media)
-    dept_data = DEPARTMENT_OFFICERS.get(ticket['department'], DEPARTMENT_OFFICERS["Central Grievance Cell (Municipal Authority)"])
-    g_id = ticket['gov_dept_id'] if 'gov_dept_id' in keys and ticket['gov_dept_id'] else dept_data["dept_id"]
-
-    ticket_data = {
-        'ticket_id': ticket['ticket_id'],
-        'gov_dept_id': g_id,
-        'description': ticket['description'],
-        'department': ticket['department'],
-        'priority': ticket['priority'],
-        'location': ticket['location'] if 'location' in keys and ticket['location'] else "Not Specified",
-        'map_url': ticket['map_url'] if 'map_url' in keys and ticket['map_url'] else "",
-        'created_at': ticket['created_at'],
-        'citizen_media': c_media,
-        'citizen_url': get_media_url(c_media),
-        'citizen_type': c_type
-    }
-
-    return render_template('resolve.html', ticket=ticket_data)
-
-# --- Work Proof Upload Action ---
 @app.route('/resolve_ticket/<ticket_id>', methods=['POST'])
 def resolve_ticket(ticket_id):
     if not session.get('admin_logged'):
@@ -663,9 +625,46 @@ def deny_ticket(ticket_id):
         
     return redirect(request.referrer or '/admin')
 
+@app.route('/resolve/<ticket_id>', methods=['GET', 'POST'])
+def resolve_page(ticket_id):
+    if not session.get('admin_logged'):
+        return redirect('/login')
+
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        file = request.files.get('work_media')
+        filename = ""
+        if file and file.filename != '':
+            ext = os.path.splitext(file.filename)[1].lower()
+            filename = f"work_proof_{ticket_id}_{int(time.time())}{ext}"
+            os.makedirs(WORK_FOLDER, exist_ok=True)
+            file.save(os.path.join(WORK_FOLDER, filename))
+
+            cursor.execute('''
+                UPDATE complaints 
+                SET status = 'Under Inspection',
+                    resolution_media = ?,
+                    resolution_media_type = 'image'
+                WHERE ticket_id = ?
+            ''', (filename, ticket_id))
+            conn.commit()
+        conn.close()
+        return redirect('/admin')
+
+    cursor.execute("SELECT * FROM complaints WHERE ticket_id = ?", (ticket_id,))
+    complaint = cursor.fetchone()
+    conn.close()
+    if not complaint:
+        return redirect('/admin')
+    return render_template('resolve.html', complaint=dict(complaint))
+
 @app.route('/mark_resolved/<ticket_id>')
 def mark_resolved(ticket_id):
-    """Officer inspection verify karne ke baad ticket ko resolve karega"""
+    if not session.get('admin_logged'):
+        return redirect('/login')
     try:
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
@@ -673,8 +672,17 @@ def mark_resolved(ticket_id):
         conn.commit()
         conn.close()
     except Exception as e:
-        print(f"Resolution error: {e}")
+        print(f"Resolve error: {e}")
     return redirect(request.referrer or '/admin')
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080, debug=True)
+@app.route('/track/<ticket_id>')
+def track_ticket(ticket_id):
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM complaints WHERE ticket_id = ?", (ticket_id.strip(),))
+    ticket = cursor.fetchone()
+    conn.close()
+    if not ticket:
+        return render_template('dashboard.html', error=f"Ticket '{ticket_id}' not found.")
+    return render_template('dashboard.html', ticket=dict(ticket))

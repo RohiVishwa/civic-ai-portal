@@ -3,114 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CivicAI - Grievance Dispatched</title>
+    <title>Grievance Tracking | CivicAI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #1e1b4b 100%);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px 14px;
-            color: #f8fafc;
-        }
-        .docket-card {
-            background: #161f30;
-            border-radius: 20px;
-            border: 1px solid #232f48;
-            max-width: 550px;
-            width: 100%;
-            padding: 26px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
-        }
-        .ticket-banner {
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px dashed #6366f1;
-            border-radius: 12px;
-            padding: 14px;
-            text-align: center;
-            margin-bottom: 18px;
-        }
-        .detail-row {
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 10px;
-            padding: 10px 14px;
-            margin-bottom: 9px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        body { background-color: #0b0f19; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .card-custom { background: #131b2e; border: 1px solid #1e293b; border-radius: 12px; }
+        .step-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; }
     </style>
 </head>
-<body>
-
-    <div class="docket-card">
-        <div class="text-center mb-3">
-            <i class="fa-solid fa-envelope-circle-check fa-3x text-success mb-2"></i>
-            <h4 class="fw-bold m-0 text-white">Grievance Dispatched</h4>
-            <p class="text-secondary small mt-1">Official High-Priority Email Triggered to Government</p>
-        </div>
-
-        <!-- Ticket ID -->
-        <div class="ticket-banner">
-            <span class="text-secondary small d-block text-uppercase">Tracking Ticket ID</span>
-            <h3 class="fw-bold text-info m-0 mt-1">{{ ticket_id }}</h3>
-            <span class="badge bg-dark border border-warning text-warning mt-2" style="font-size: 11px;">
-                Gov Department ID: {{ gov_dept_id }}
-            </span>
-        </div>
-
-        <!-- Officer & Email Box -->
-        <div class="alert alert-success bg-success bg-opacity-10 border-success border-opacity-25 py-2 small mb-3">
-            <div class="fw-bold text-white">
-                <i class="fa-solid fa-paper-plane text-success me-1"></i> Dispatched to: {{ officer_title }}
-            </div>
-            <small class="text-secondary">Official Inbox: <strong class="text-info">{{ officer_email }}</strong></small>
-        </div>
-
-        <div class="detail-row">
-            <span class="text-secondary small">Department</span>
-            <span class="fw-bold text-white small">{{ department }}</span>
-        </div>
-
-        <div class="detail-row">
-            <span class="text-secondary small">AI Priority Assessment</span>
-            <span class="badge {% if priority == 'HIGH' %}bg-danger{% elif priority == 'MEDIUM' %}bg-warning text-dark{% else %}bg-success{% endif %}">
-                {{ priority }} PRIORITY
-            </span>
-        </div>
-
-        <div class="detail-row">
-            <span class="text-secondary small">Incident Location</span>
-            <span class="text-white small fw-semibold text-truncate" style="max-width: 240px;">{{ location if location else 'Not Specified' }}</span>
-        </div>
-
-        {% if map_url %}
-        <div class="detail-row">
-            <span class="text-secondary small">Google Maps Spot</span>
-            <a href="{{ map_url }}" target="_blank" class="badge bg-primary text-decoration-none">
-                <i class="fa-brands fa-google me-1"></i> View Spot
-            </a>
-        </div>
-        {% endif %}
-
-        {% if media_name and media_url %}
-        <div class="detail-row">
-            <span class="text-secondary small">Attached Evidence</span>
-            <a href="{{ media_url }}" target="_blank" class="badge bg-dark border border-secondary text-info text-decoration-none">
-                <i class="fa-solid fa-paperclip me-1"></i> View File
-            </a>
-        </div>
-        {% endif %}
-
-        <div class="text-center mt-4 d-flex gap-2">
-            <a href="/" class="btn btn-outline-light rounded-pill px-3 btn-sm flex-grow-1">&larr; File Another Grievance</a>
-            <a href="/login" class="btn btn-warning rounded-pill px-3 btn-sm fw-semibold text-dark">Officer Login &rarr;</a>
-        </div>
+<body class="py-4">
+<div class="container" style="max-width: 580px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="/" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-arrow-left me-1"></i> Citizen Portal</a>
+        <h5 class="fw-bold m-0 text-white"><i class="fa-solid fa-route text-info me-2"></i>Live Grievance Status</h5>
+        <span></span>
     </div>
 
+    {% if error %}
+    <div class="alert alert-danger text-center shadow-sm">
+        <i class="fa-solid fa-circle-exclamation me-2"></i> {{ error }}
+    </div>
+    {% endif %}
+
+    {% if ticket %}
+    <div class="card card-custom p-4 shadow-lg">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <span class="text-secondary small">Ticket ID</span>
+                <h5 class="fw-bold text-info m-0">{{ ticket.ticket_id }}</h5>
+            </div>
+            <div>
+                {% if ticket.status == 'Pending' %}
+                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill"><i class="fa-solid fa-clock me-1"></i> Pending Field Action</span>
+                {% elif ticket.status == 'Under Inspection' %}
+                    <span class="badge bg-info text-dark px-3 py-2 rounded-pill"><i class="fa-solid fa-magnifying-glass me-1"></i> Work Proof Under Review</span>
+                {% elif ticket.status == 'Resolved' %}
+                    <span class="badge bg-success px-3 py-2 rounded-pill"><i class="fa-solid fa-check-circle me-1"></i> Officially Resolved</span>
+                {% else %}
+                    <span class="badge bg-secondary px-3 py-2 rounded-pill">{{ ticket.status }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Visual Progress Tracker -->
+        <div class="d-flex justify-content-between position-relative my-3 px-2">
+            <div class="text-center">
+                <div class="step-circle bg-success text-white mx-auto mb-1"><i class="fa-solid fa-check"></i></div>
+                <span class="small text-secondary" style="font-size: 11px;">Reported</span>
+            </div>
+            <div class="text-center">
+                <div class="step-circle {% if ticket.status in ['Under Inspection', 'Resolved'] %}bg-success text-white{% else %}bg-secondary text-dark{% endif %} mx-auto mb-1">
+                    {% if ticket.status in ['Under Inspection', 'Resolved'] %}<i class="fa-solid fa-check"></i>{% else %}2{% endif %}
+                </div>
+                <span class="small text-secondary" style="font-size: 11px;">Work Proof</span>
+            </div>
+            <div class="text-center">
+                <div class="step-circle {% if ticket.status == 'Resolved' %}bg-success text-white{% else %}bg-secondary text-dark{% endif %} mx-auto mb-1">
+                    {% if ticket.status == 'Resolved' %}<i class="fa-solid fa-check"></i>{% else %}3{% endif %}
+                </div>
+                <span class="small text-secondary" style="font-size: 11px;">Resolved</span>
+            </div>
+        </div>
+
+        <hr class="border-secondary">
+        <div class="mb-2">
+            <span class="text-secondary small d-block">Department Assigned</span>
+            <span class="badge bg-dark border border-secondary text-white">{{ ticket.department }}</span>
+        </div>
+        <div class="mb-2">
+            <span class="text-secondary small d-block">Reported Problem</span>
+            <p class="text-white small p-2 rounded bg-dark border border-secondary mb-1">{{ ticket.description }}</p>
+        </div>
+        <div>
+            <span class="text-secondary small d-block">GPS Location</span>
+            <span class="text-success small font-monospace"><i class="fa-solid fa-location-dot me-1"></i> {{ ticket.location or 'Recorded via Satellite' }}</span>
+        </div>
+    </div>
+    {% endif %}
+</div>
 </body>
 </html>

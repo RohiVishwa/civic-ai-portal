@@ -2,23 +2,135 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Upload Work Proof - {{ ticket.ticket_id }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Field Officer Resolution | CivicAI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #0b0f19; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .card-custom { background: #131b2e; border: 1px solid #1e293b; border-radius: 12px; }
+    </style>
 </head>
-<body class="bg-dark text-light p-4">
-    <div class="container" style="max-width: 700px;">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4>Work Proof: {{ ticket.ticket_id }}</h4>
-            <button type="button" onclick="history.back()" class="btn btn-outline-secondary btn-sm">Back</button>
+<body class="py-4">
+<div class="container" style="max-width: 540px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="/admin" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-arrow-left me-1"></i> Admin Portal</a>
+        <h5 class="fw-bold m-0 text-white"><i class="fa-solid fa-clipboard-check text-warning me-2"></i>Field Work Proof</h5>
+        <span></span>
+    </div>
+
+    <div class="card card-custom p-4 shadow-lg">
+        <div class="mb-3">
+            <span class="text-secondary small d-block">Ticket ID</span>
+            <span class="text-warning fw-bold">{{ complaint.ticket_id }}</span>
+            <p class="text-white small mt-1 mb-0">{{ complaint.description }}</p>
         </div>
-        <p class="text-secondary">{{ ticket.description }}</p>
-        <form action="/resolve_ticket/{{ ticket.ticket_id }}" method="POST" enctype="multipart/form-data">
-            <div class="mb-3">
-                <label class="form-label">Attach Fixed/Solved Photo or Video Proof</label>
-                <input type="file" name="proof_media" class="form-control" accept="image/*,video/*" required>
+        <hr class="border-secondary">
+
+        <form action="/resolve/{{ complaint.ticket_id }}" method="POST" enctype="multipart/form-data">
+            <label class="form-label small fw-bold text-white">
+                <i class="fa-solid fa-camera text-warning me-1"></i> Snap Live Resolution Proof (On-Site GPS)
+            </label>
+
+            <div class="p-3 rounded mb-3" style="background: rgba(15, 23, 42, 0.7); border: 1px dashed #f59e0b;">
+                <div class="position-relative mb-2" style="border-radius: 8px; overflow: hidden; background: #000;">
+                    <video id="officerFeed" autoplay playsinline style="width: 100%; height: 240px; object-fit: cover; display: block;"></video>
+                    <canvas id="officerCanvas" style="display: none;"></canvas>
+                    
+                    <div id="officerHud" class="position-absolute bottom-0 start-0 w-100 p-2 text-start" 
+                         style="background: linear-gradient(transparent, rgba(0,0,0,0.85)); font-size: 11px; font-family: monospace; color: #fbbf24;">
+                        <i class="fa-solid fa-satellite-dish fa-fade me-1"></i>
+                        <span id="coordsDisplay">Satellite GPS: Locking Live Spot...</span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-center gap-2 mb-2">
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="initCam()">
+                        <i class="fa-solid fa-arrows-rotate me-1"></i> Switch Camera
+                    </button>
+                    <button type="button" class="btn btn-sm btn-warning fw-bold text-dark" onclick="snapOfficerProof()">
+                        <i class="fa-solid fa-camera me-1"></i> Snap Work Proof
+                    </button>
+                </div>
+
+                <input type="file" name="work_media" id="workMediaInput" style="display: none;" required>
+                <div id="snapStatus" class="text-center small text-secondary">Capture live on-site photo after resolving issue.</div>
             </div>
-            <button type="submit" class="btn btn-success w-100 fw-bold">Confirm & Mark Resolved</button>
+
+            <button type="submit" id="submitProofBtn" class="btn btn-warning w-100 fw-bold py-2 shadow-sm text-dark" disabled>
+                <i class="fa-solid fa-paper-plane me-2"></i> Submit Proof for Inspection
+            </button>
         </form>
     </div>
+</div>
+
+<script>
+let streamObj = null;
+let offLat = null, offLng = null;
+
+function trackGps() {
+    if ("geolocation" in navigator) {
+        navigator.geolocation.watchPosition(
+            (pos) => {
+                offLat = pos.coords.latitude.toFixed(6);
+                offLng = pos.coords.longitude.toFixed(6);
+                const hud = document.getElementById('coordsDisplay');
+                if (hud) {
+                    hud.innerHTML = `OFFICER GPS: ${offLat}, ${offLng} (±${Math.round(pos.coords.accuracy)}m)`;
+                    hud.style.color = "#4ade80";
+                }
+            },
+            (err) => {
+                const hud = document.getElementById('coordsDisplay');
+                if (hud) { hud.innerHTML = "GPS Blocked. Enable location access."; hud.style.color = "#f87171"; }
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+}
+
+async function initCam() {
+    try {
+        if (streamObj) streamObj.getTracks().forEach(t => t.stop());
+        const v = document.getElementById('officerFeed');
+        streamObj = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: "environment" } },
+            audio: false
+        });
+        v.srcObject = streamObj;
+        trackGps();
+    } catch(e) {
+        console.log(e);
+    }
+}
+
+function snapOfficerProof() {
+    const v = document.getElementById('officerFeed');
+    const c = document.getElementById('officerCanvas');
+    if (!v.videoWidth) { initCam(); return; }
+
+    c.width = v.videoWidth;
+    c.height = v.videoHeight;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+    ctx.fillRect(0, c.height - 45, c.width, 45);
+    ctx.font = "18px Monospace";
+    ctx.fillStyle = "#fbbf24";
+    ctx.fillText(`FIELD WORK PROOF | GPS: ${offLat || 'N/A'}, ${offLng || 'N/A'} | ${new Date().toLocaleString()}`, 15, c.height - 16);
+
+    c.toBlob((blob) => {
+        const file = new File([blob], `work_proof_${Date.now()}.jpg`, { type: "image/jpeg" });
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        document.getElementById('workMediaInput').files = dt.files;
+        document.getElementById('submitProofBtn').disabled = false;
+        document.getElementById('snapStatus').innerHTML = '<span class="text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Proof Stamped! Ready to submit.</span>';
+    }, 'image/jpeg', 0.95);
+}
+
+window.addEventListener('DOMContentLoaded', initCam);
+</script>
 </body>
 </html>
