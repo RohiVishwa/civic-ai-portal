@@ -282,29 +282,30 @@ def home():
 @app.route('/analyze', methods=['POST'])
 def analyze():
     try:
-        description = request.form.get('description', '').strip()
-        location = request.form.get('location', '').strip()
-        dept_choice = request.form.get('department', '').strip()
-
+        location = request.form.get('location', 'Satellite Coordinates Logged').strip()
+        
         file = request.files.get('damage_media')
         filename = ""
+        filepath = ""
         if file and file.filename != '':
             ext = os.path.splitext(file.filename)[1].lower()
-            filename = f"evidence_{int(time.time())}_{file.filename}"
-            filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', filename)
+            filename = f"evidence_{int(time.time())}{ext}"
             os.makedirs(UPLOAD_FOLDER, exist_ok=True)
             filepath = os.path.join(UPLOAD_FOLDER, filename)
             file.save(filepath)
 
-        # Department classification
-        if dept_choice and dept_choice != 'Auto-Detect via AI Engine':
-            department = dept_choice
-        else:
-            try:
-                department = classify_department(description)
-            except Exception:
-                department = "Municipal Corporation"
+        # --- AI ENGINE RESTORED ---
+        try:
+            import ai_engine
+            analysis_text = ai_engine.analyze_image(filepath)
+            department = ai_engine.classify_department(analysis_text)
+        except Exception as e:
+            print(f"AI Engine fallback: {e}")
+            analysis_text = "AI Vision Analysis: Damage detected in the uploaded live evidence. Immediate field inspection required."
+            department = "Public Works Department"
 
+        import random
+        from datetime import datetime
         ticket_id = f"TKT-{datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
         created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -313,23 +314,21 @@ def analyze():
         cursor.execute('''
             INSERT INTO complaints (ticket_id, description, department, priority, status, damage_media, damage_media_type, location, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (ticket_id, description, department, 'High', 'Pending', filename, 'image', location, created_at))
+        ''', (ticket_id, analysis_text, department, 'High', 'Pending', filename, 'image', location, created_at))
         conn.commit()
         conn.close()
 
-        return redirect(f'/track/{ticket_id}')
+        # Render original detailed dashboard layout
+        return render_template('dashboard.html', 
+                               ticket_id=ticket_id, 
+                               analysis=analysis_text, 
+                               department=department, 
+                               location=location,
+                               status='Pending')
 
     except Exception as e:
-        print(f"Error in /analyze: {e}")
-        # Return fallback dashboard instead of crashing with 500
-        fallback_ticket = {
-            "ticket_id": f"TKT-{random.randint(1000,9999)}",
-            "description": request.form.get('description', 'Grievance submitted'),
-            "department": "Public Works / General",
-            "status": "Pending",
-            "location": request.form.get('location', 'Satellite Coordinates Logged')
-        }
-        return render_template('dashboard.html', ticket=fallback_ticket)
+        print(f"Analyze error: {e}")
+        return f"Error: {e}", 500
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():

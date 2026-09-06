@@ -3,84 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grievance Tracking | CivicAI</title>
+    <title>AI Dispatch Report | CivicAI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background-color: #0b0f19; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         .card-custom { background: #131b2e; border: 1px solid #1e293b; border-radius: 12px; }
-        .step-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; }
+        .terminal { background: #050505; color: #4ade80; font-family: monospace; padding: 15px; border-radius: 8px; font-size: 13px; border: 1px solid #1f2937; }
     </style>
 </head>
 <body class="py-4">
-<div class="container" style="max-width: 580px;">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="/" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-arrow-left me-1"></i> Citizen Portal</a>
-        <h5 class="fw-bold m-0 text-white"><i class="fa-solid fa-route text-info me-2"></i>Live Grievance Status</h5>
-        <span></span>
+<div class="container" style="max-width: 650px;">
+    <div class="text-center mb-4">
+        <h4 class="fw-bold text-white"><i class="fa-solid fa-robot text-primary me-2"></i>AI Triage & Dispatch Report</h4>
+        <p class="text-secondary small">Your grievance has been processed by CivicAI Engine</p>
     </div>
 
-    {% if error %}
-    <div class="alert alert-danger text-center shadow-sm">
-        <i class="fa-solid fa-circle-exclamation me-2"></i> {{ error }}
-    </div>
-    {% endif %}
-
-    {% if ticket %}
-    <div class="card card-custom p-4 shadow-lg">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="card card-custom p-4 shadow-lg mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <span class="text-secondary small">Ticket ID</span>
-                <h5 class="fw-bold text-info m-0">{{ ticket.ticket_id }}</h5>
+                <span class="text-secondary small d-block">Generated Ticket ID</span>
+                <h4 class="fw-bold text-info m-0">{{ ticket_id if ticket_id else ticket.ticket_id }}</h4>
             </div>
-            <div>
-                {% if ticket.status == 'Pending' %}
-                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill"><i class="fa-solid fa-clock me-1"></i> Pending Field Action</span>
-                {% elif ticket.status == 'Under Inspection' %}
-                    <span class="badge bg-info text-dark px-3 py-2 rounded-pill"><i class="fa-solid fa-magnifying-glass me-1"></i> Work Proof Under Review</span>
-                {% elif ticket.status == 'Resolved' %}
-                    <span class="badge bg-success px-3 py-2 rounded-pill"><i class="fa-solid fa-check-circle me-1"></i> Officially Resolved</span>
+            <div class="text-end">
+                <span class="text-secondary small d-block">Status</span>
+                {% set current_status = status if status else (ticket.status if ticket else 'Pending') %}
+                {% if current_status == 'Pending' %}
+                    <span class="badge bg-warning text-dark px-3 py-2"><i class="fa-solid fa-clock me-1"></i> Pending Action</span>
+                {% elif current_status == 'Under Inspection' %}
+                    <span class="badge bg-info text-dark px-3 py-2"><i class="fa-solid fa-magnifying-glass me-1"></i> Under Inspection</span>
+                {% elif current_status == 'Resolved' %}
+                    <span class="badge bg-success px-3 py-2"><i class="fa-solid fa-check-circle me-1"></i> Resolved</span>
                 {% else %}
-                    <span class="badge bg-secondary px-3 py-2 rounded-pill">{{ ticket.status }}</span>
+                    <span class="badge bg-secondary px-3 py-2">{{ current_status }}</span>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Visual Progress Tracker -->
-        <div class="d-flex justify-content-between position-relative my-3 px-2">
-            <div class="text-center">
-                <div class="step-circle bg-success text-white mx-auto mb-1"><i class="fa-solid fa-check"></i></div>
-                <span class="small text-secondary" style="font-size: 11px;">Reported</span>
-            </div>
-            <div class="text-center">
-                <div class="step-circle {% if ticket.status in ['Under Inspection', 'Resolved'] %}bg-success text-white{% else %}bg-secondary text-dark{% endif %} mx-auto mb-1">
-                    {% if ticket.status in ['Under Inspection', 'Resolved'] %}<i class="fa-solid fa-check"></i>{% else %}2{% endif %}
-                </div>
-                <span class="small text-secondary" style="font-size: 11px;">Work Proof</span>
-            </div>
-            <div class="text-center">
-                <div class="step-circle {% if ticket.status == 'Resolved' %}bg-success text-white{% else %}bg-secondary text-dark{% endif %} mx-auto mb-1">
-                    {% if ticket.status == 'Resolved' %}<i class="fa-solid fa-check"></i>{% else %}3{% endif %}
-                </div>
-                <span class="small text-secondary" style="font-size: 11px;">Resolved</span>
+        <div class="mb-3">
+            <label class="text-secondary small fw-bold mb-1"><i class="fa-solid fa-microchip text-primary me-1"></i> AI Vision Analysis Result</label>
+            <div class="p-3 rounded bg-dark border border-secondary text-white small" style="line-height: 1.6;">
+                {{ analysis if analysis else ticket.description }}
             </div>
         </div>
 
-        <hr class="border-secondary">
-        <div class="mb-2">
-            <span class="text-secondary small d-block">Department Assigned</span>
-            <span class="badge bg-dark border border-secondary text-white">{{ ticket.department }}</span>
+        <div class="row mb-3">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <label class="text-secondary small fw-bold mb-1"><i class="fa-solid fa-building text-primary me-1"></i> Auto-Assigned Department</label>
+                <div><span class="badge bg-primary px-3 py-2" style="font-size: 14px;">{{ department if department else ticket.department }}</span></div>
+            </div>
+            <div class="col-md-6">
+                <label class="text-secondary small fw-bold mb-1"><i class="fa-solid fa-location-crosshairs text-primary me-1"></i> Locked Coordinates</label>
+                <div class="text-success font-monospace mt-1">
+                    {{ location if location else ticket.location }}
+                </div>
+            </div>
         </div>
-        <div class="mb-2">
-            <span class="text-secondary small d-block">Reported Problem</span>
-            <p class="text-white small p-2 rounded bg-dark border border-secondary mb-1">{{ ticket.description }}</p>
-        </div>
-        <div>
-            <span class="text-secondary small d-block">GPS Location</span>
-            <span class="text-success small font-monospace"><i class="fa-solid fa-location-dot me-1"></i> {{ ticket.location }}</span>
+        
+        <div class="mt-4">
+            <label class="text-secondary small fw-bold mb-2"><i class="fa-solid fa-envelope-circle-check text-success me-1"></i> Official Dispatch Simulation</label>
+            <div class="terminal">
+                > Triggering dispatch sequence...<br>
+                > Compiling AI evidence & GPS telemetry...<br>
+                > Routing directly to Nodal Officer ({{ department if department else ticket.department }})...<br>
+                > <span class="text-white">Email dispatch confirmed.</span><br>
+                > Awaiting field action...
+            </div>
         </div>
     </div>
-    {% endif %}
+
+    <div class="text-center">
+        <a href="/" class="btn btn-outline-info fw-bold px-4"><i class="fa-solid fa-arrow-left me-2"></i> Submit Another Grievance</a>
+    </div>
 </div>
 </body>
 </html>
