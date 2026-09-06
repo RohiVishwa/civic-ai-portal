@@ -133,8 +133,20 @@
                 </label>
                 <textarea name="description" id="description" class="form-control" rows="3" placeholder="Describe the issue in detail (e.g. Broken water pipeline leaking near market, pothole on main road, etc.)..."></textarea>
             </div>
+<div class="mb-3">
+                <label class="form-label small fw-bold text-dark mb-1">
+                    <i class="fa-solid fa-building text-primary me-1"></i> Relevant Department
+                </label>
+                <select name="department" id="department_select" class="form-select form-select-sm">
+                    <option value="Auto-Detect via AI Engine" selected>Auto-Detect via AI Engine</option>
+                    <option value="Roads & Public Works">Roads & Public Works</option>
+                    <option value="Water & Sanitation">Water & Sanitation</option>
+                    <option value="Sanitation & Waste Management">Sanitation & Waste Management</option>
+                    <option value="Electricity & Street Lighting">Electricity & Street Lighting</option>
+                    <option value="Town Planning & Enforcement">Town Planning & Enforcement</option>
+                </select>
+            </div>
 
-            <!-- Relevant Department (Auto-Detect via AI Engine) -->
             <div class="mb-3">
                 <label class="form-label small fw-bold text-dark mb-1">
                     <i class="fa-solid fa-building text-primary me-1"></i> Relevant Department
