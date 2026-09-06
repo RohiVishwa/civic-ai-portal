@@ -3,136 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CivicAI - AI Powered Citizen Grievance Portal</title>
-    <!-- Bootstrap & FontAwesome -->
+    <title>CivicAI - Citizen Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Leaflet CSS for Spot Map -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-   <style>
-        body {
-            background: #f1f5f9;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px 12px;
-            color: #0f172a;
-        }
-        .portal-card {
-            background: #ffffff;
-            border-radius: 16px;
-            border: 1px solid #cbd5e1;
-            max-width: 520px;
-            width: 100%;
-            padding: 28px 24px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
-        }
-        .card-header-custom h3 {
-            color: #0f172a !important;
-            font-weight: 700;
-        }
-        .card-header-custom p,
-        .text-secondary {
-            color: #475569 !important;
-            font-size: 13px;
-        }
-        label, .form-label {
-            color: #1e293b !important;
-            font-weight: 600;
-            font-size: 13.5px;
-        }
-        .form-control {
-            background: #ffffff !important;
-            border: 1px solid #cbd5e1 !important;
-            color: #0f172a !important;
-            border-radius: 10px;
-            padding: 10px 14px;
-            font-size: 14px;
-        }
-        .form-control::placeholder {
-            color: #94a3b8 !important;
-        }
-        .form-control:focus {
-            background: #ffffff !important;
-            border-color: #2563eb !important;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
-        }
-        .upload-box {
-            background: #f8fafc;
-            border: 2px dashed #94a3b8;
-            border-radius: 12px;
-            padding: 24px 16px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .upload-box:hover {
-            border-color: #2563eb;
-            background: #eff6ff;
-        }
-        .upload-box i {
-            color: #2563eb;
-        }
-        .upload-box span, .upload-box p {
-            color: #0f172a !important;
-            font-weight: 600;
-        }
-        .upload-box small {
-            color: #64748b !important;
-        }
-        .btn-submit {
-            background: #2563eb;
-            color: #ffffff !important;
-            border: none;
-            border-radius: 10px;
-            padding: 13px;
-            font-weight: 600;
-            font-size: 15px;
-            width: 100%;
-            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.25);
-            transition: background 0.2s ease;
-        }
-        .btn-submit:hover {
-            background: #1d4ed8;
-        }
-        #map {
-            width: 100%;
-            height: 220px !important;
-            min-height: 220px !important;
-            border-radius: 10px;
-            border: 1px solid #cbd5e1;
-            margin-top: 8px;
-            z-index: 1;
-        
-        }
+    <style>
+        body { background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .card-custom { max-width: 620px; margin: 40px auto; background: #ffffff; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+        #camera-feed { width: 100%; height: 260px; object-fit: cover; border-radius: 10px; background: #000; display: block; }
+        #captured-preview { width: 100%; height: 260px; object-fit: cover; border-radius: 10px; display: none; }
     </style>
 </head>
 <body>
-
-<div class="portal-card">
-    <div class="card-header-custom">
-        <!-- Header with Officer Login Button -->
-        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+<div class="container py-4">
+    <div class="card card-custom p-4">
+        
+        <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-                <h4 class="fw-bold m-0 text-dark">
-                    <i class="fa-solid fa-city text-primary me-2"></i>CivicAI Citizen Portal
-                </h4>
-                <p class="text-secondary small m-0 mt-1">Smart Grievance Redressal & Triage</p>
+                <h4 class="fw-bold text-dark m-0"><i class="fa-solid fa-city text-primary me-2"></i>CivicAI Citizen Portal</h4>
+                <p class="text-muted small m-0">Smart Grievance Redressal &amp; Triage</p>
             </div>
-            <a href="/login" class="btn btn-outline-dark btn-sm fw-semibold shadow-sm" style="border-radius: 8px; font-size: 12px; padding: 6px 12px;">
-                <i class="fa-solid fa-user-shield text-primary me-1"></i> Officer Login
-            </a>
+            <a href="/login" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-user-shield me-1"></i> Officer Login</a>
         </div>
-        <p class="text-secondary small m-0">Report Grievances with AI Triage & Direct Official Email Dispatch</p>
-<!-- Citizen Problem Description Box -->
-            <!-- Grievance Description -->
+
+        <p class="text-secondary small mb-3">Report Grievances with AI Triage &amp; Direct Official Email Dispatch</p>
+
+        <form id="grievanceForm" action="/analyze" method="POST" enctype="multipart/form-data">
+            
+            <!-- Citizen Problem Description -->
             <div class="mb-3">
                 <label class="form-label small fw-bold text-dark mb-1">
                     <i class="fa-solid fa-align-left text-primary me-1"></i> Grievance Description / Citizen Notes
                 </label>
-                <textarea name="description" id="description" class="form-control" rows="3" placeholder="Describe the issue in detail (e.g. Broken water pipeline leaking near market, pothole on main road, etc.)..."></textarea>
+                <textarea name="description" id="description" class="form-control" rows="3" placeholder="Describe the issue in detail (e.g. broken water pipeline, pothole on road, garbage overflow)..." required></textarea>
             </div>
 
             <!-- Single Relevant Department Dropdown -->
@@ -140,222 +42,107 @@
                 <label class="form-label small fw-bold text-dark mb-1">
                     <i class="fa-solid fa-building text-primary me-1"></i> Relevant Department
                 </label>
-                <select name="department" id="department_select" class="form-select form-select-sm">
+                <select name="department" id="department" class="form-select form-select-sm">
                     <option value="Auto-Detect via AI Engine" selected>Auto-Detect via AI Engine</option>
-                    <option value="Roads & Public Works">Roads & Public Works</option>
-                    <option value="Water & Sanitation">Water & Sanitation</option>
-                    <option value="Sanitation & Waste Management">Sanitation & Waste Management</option>
-                    <option value="Electricity & Street Lighting">Electricity & Street Lighting</option>
-                    <option value="Town Planning & Enforcement">Town Planning & Enforcement</option>
+                    <option value="Roads &amp; Public Works">Roads &amp; Public Works</option>
+                    <option value="Water &amp; Sanitation">Water &amp; Sanitation</option>
+                    <option value="Sanitation &amp; Waste Management">Sanitation &amp; Waste Management</option>
+                    <option value="Electricity &amp; Street Lighting">Electricity &amp; Street Lighting</option>
+                    <option value="Town Planning &amp; Enforcement">Town Planning &amp; Enforcement</option>
                 </select>
             </div>
 
+            <!-- Live Evidence Capture -->
             <div class="mb-3">
                 <label class="form-label small fw-bold text-dark mb-1">
-                    <i class="fa-solid fa-building text-primary me-1"></i> Relevant Department
+                    <i class="fa-solid fa-camera text-primary me-1"></i> Live Evidence Capture (Real-time AI Scan + Satellite GPS)
                 </label>
-                <select name="department" id="department_select" class="form-select form-select-sm">
-                    <option value="Auto-Detect via AI Engine" selected>Auto-Detect via AI Engine</option>
-                    <option value="Roads & Public Works">Roads & Public Works</option>
-                    <option value="Water & Sanitation">Water & Sanitation</option>
-                    <option value="Sanitation & Waste Management">Sanitation & Waste Management</option>
-                    <option value="Electricity & Street Lighting">Electricity & Street Lighting</option>
-                    <option value="Town Planning & Enforcement">Town Planning & Enforcement</option>
-                </select>
+                
+                <div class="position-relative bg-dark rounded p-2 text-center mb-2">
+                    <video id="camera-feed" autoplay playsinline></video>
+                    <img id="captured-preview" alt="Evidence Preview">
+                    <div id="gps-badge" class="position-absolute bottom-0 start-0 m-3 px-2 py-1 rounded small font-monospace text-warning bg-dark bg-opacity-75 border border-secondary" style="font-size: 11px;">
+                        LAT: 30.730376 | LNG: 76.168847 (±10m)
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" id="startCamBtn" class="btn btn-outline-secondary btn-sm flex-fill" onclick="initCamera()">
+                        <i class="fa-solid fa-camera-rotate me-1"></i> Open / Switch Camera
+                    </button>
+                    <button type="button" id="snapBtn" class="btn btn-success btn-sm flex-fill" onclick="snapPhoto()">
+                        <i class="fa-solid fa-crosshairs me-1"></i> Snap &amp; Scan with GPS
+                    </button>
+                </div>
             </div>
 
+            <input type="hidden" name="location" id="location" value="30.730376, 76.168847">
+            <input type="hidden" name="image_base64" id="image_base64">
+
+            <!-- Process & Dispatch Submit Button -->
+            <button type="submit" id="submitBtn" class="btn btn-primary w-100 fw-bold py-2 mt-2 shadow-sm">
+                <i class="fa-solid fa-bolt me-2"></i> Process Grievance &amp; Dispatch via AI
+            </button>
+
+        </form>
+
+    </div>
 </div>
 
-            
-
-
-
-
-
-<!-- Live Evidence Camera + AI Analysis Pipeline -->
-<div class="mb-3">
-    <label class="form-label small fw-bold text-white">
-        <i class="fa-solid fa-camera text-primary me-1"></i> Live Evidence Capture (Real-time AI Scan + Satellite GPS)
-    </label>
-
-    <div class="p-3 rounded" style="background: rgba(15, 23, 42, 0.7); border: 1px dashed #3b82f6;">
-        <!-- Live Video Viewfinder -->
-        <div class="position-relative mb-2" style="max-width: 420px; margin: 0 auto; border-radius: 8px; overflow: hidden; background: #000;">
-            <video id="liveFeed" autoplay playsinline style="width: 100%; height: 240px; object-fit: cover; display: block;"></video>
-            <canvas id="photoCanvas" style="display: none;"></canvas>
-            
-            <!-- Live Coordinate HUD Overlay -->
-            <div id="liveHud" class="position-absolute bottom-0 start-0 w-100 p-2 text-start" 
-                 style="background: linear-gradient(transparent, rgba(0,0,0,0.85)); font-size: 11px; font-family: monospace; color: #38bdf8;">
-                <i class="fa-solid fa-satellite-dish fa-fade text-warning me-1"></i>
-                <span id="coordsDisplay">Satellite GPS: Acquiring Lock...</span>
-            </div>
-        </div>
-
-        <div class="d-flex justify-content-center gap-2 mb-2">
-            <button type="button" class="btn btn-sm btn-outline-info" onclick="initLiveCamera()">
-                <i class="fa-solid fa-arrows-rotate me-1"></i> Open / Switch Camera
-            </button>
-            <button type="button" class="btn btn-sm btn-success fw-bold" onclick="captureLiveEvidence()">
-                <i class="fa-solid fa-crosshairs me-1"></i> Snap & Scan with GPS
-            </button>
-        </div>
-
-        <!-- Hidden Real File Input that Flask AI Engine reads -->
-        <input type="file" name="damage_media" id="damageMediaInput" style="display: none;" required>
-
-        <div id="snapStatus" class="text-center small text-secondary mt-1">
-            Click 'Snap & Scan with GPS' to lock satellite location and run AI Triage.
-        </div>
-    
-        <!-- AI Analysis & Submit Dispatch Button -->
-        <div class="mt-3">
-            <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-2 fw-bold shadow-sm" style="font-size: 15px; border-radius: 8px;">
-                <i class="fa-solid fa-bolt me-2"></i> Process Grievance & Dispatch via AI
-            </button>
-        </div>
-        <input type="hidden" name="image_base64" id="image_base64">
-</form>
-
-<!-- Hidden inputs for backend coordinates -->
-<input type="hidden" name="location" id="locationInput">
-<input type="hidden" name="latitude" id="latitudeInput">
-<input type="hidden" name="longitude" id="longitudeInput">
-
 <script>
-let streamTrack = null;
-let currentLat = null;
-let currentLng = null;
-
-function trackGpsSatellite() {
-    if ("geolocation" in navigator) {
-        navigator.geolocation.watchPosition(
-            function(pos) {
-                currentLat = pos.coords.latitude.toFixed(6);
-                currentLng = pos.coords.longitude.toFixed(6);
-                
-                document.getElementById('latitudeInput').value = currentLat;
-                document.getElementById('longitudeInput').value = currentLng;
-                document.getElementById('locationInput').value = `${currentLat}, ${currentLng}`;
-                
-                const hud = document.getElementById('coordsDisplay');
-                if (hud) {
-                    hud.innerHTML = `LAT: ${currentLat} | LNG: ${currentLng} (±${Math.round(pos.coords.accuracy)}m)`;
-                    hud.style.color = "#4ade80";
-                }
-            },
-            function(err) {
-                const hud = document.getElementById('coordsDisplay');
-                if (hud) {
-                    hud.innerHTML = "GPS Permission Blocked. Please Allow Location Access.";
-                    hud.style.color = "#f87171";
-                }
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-    }
-}
-
-async function initLiveCamera() {
-    try {
-        if (streamTrack) {
-            streamTrack.getTracks().forEach(t => t.stop());
-        }
-        const video = document.getElementById('liveFeed');
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false
-        });
-        streamTrack = stream;
-        video.srcObject = stream;
-        trackGpsSatellite();
-    } catch (err) {
-        console.log("Camera trigger info: " + err.message);
-    }
-}
-
-function captureLiveEvidence() {
-    const video = document.getElementById('liveFeed');
-    const canvas = document.getElementById('photoCanvas');
-    const status = document.getElementById('snapStatus');
-
-    if (!video.videoWidth) {
-        alert("Camera start ho raha hai, kripya 1 second rukein...");
-        initLiveCamera();
-        return;
-    }
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    
-    // Draw current frame
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // Overlay GPS coordinates directly on image
-    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-    ctx.fillRect(0, canvas.height - 45, canvas.width, 45);
-    ctx.font = "18px Monospace";
-    ctx.fillStyle = "#38bdf8";
-    const stamp = `LAT: ${currentLat || 'N/A'} | LNG: ${currentLng || 'N/A'} | CIVIC-AI LIVE EVIDENCE`;
-    ctx.fillText(stamp, 15, canvas.height - 16);
-
-    // Convert Canvas to Blob and attach to damage_media file input so Flask AI reads it
-    canvas.toBlob(function(blob) {
-        const file = new File([blob], `evidence_${Date.now()}.jpg`, { type: "image/jpeg" });
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        document.getElementById('damageMediaInput').files = dataTransfer.files;
-
-        status.innerHTML = `<span class="text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Image & Coordinates Stamped! Ready for AI Analysis.</span>`;
-    }, 'image/jpeg', 0.95);
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-    initLiveCamera();
-});
-</script>
-
-
-
-
-
-
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form');
-    const submitBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Process Grievance'));
-    const video = document.getElementById('video') || document.querySelector('video');
+    const video = document.getElementById('camera-feed');
+    const preview = document.getElementById('captured-preview');
     const b64Input = document.getElementById('image_base64');
+    let stream = null;
 
-    if (submitBtn && form) {
-        submitBtn.type = "button";
-        submitBtn.onclick = function(e) {
-            e.preventDefault();
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Analyzing via Vision AI...';
-
-            try {
-                if (video && video.srcObject) {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = video.videoWidth || 640;
-                    canvas.height = video.videoHeight || 480;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    if (b64Input) {
-                        b64Input.value = canvas.toDataURL('image/jpeg', 0.85);
-                    }
-                }
-            } catch(err) {
-                console.error("Frame grab note:", err);
-            }
-
-            form.submit();
-        };
+    async function initCamera() {
+        try {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            video.srcObject = stream;
+            video.style.display = 'block';
+            preview.style.display = 'none';
+        } catch (err) {
+            console.log("Camera access:", err);
+        }
     }
-});
-</script>
+    window.addEventListener('DOMContentLoaded', initCamera);
 
+    function snapPhoto() {
+        if (!video.videoWidth) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        b64Input.value = dataUrl;
+        preview.src = dataUrl;
+        video.style.display = 'none';
+        preview.style.display = 'block';
+    }
+
+    document.getElementById('grievanceForm').addEventListener('submit', function() {
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Analyzing &amp; Dispatching...';
+        
+        if (!b64Input.value && video && video.videoWidth) {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            b64Input.value = canvas.toDataURL('image/jpeg', 0.85);
+        }
+    });
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            const loc = pos.coords.latitude.toFixed(6) + ", " + pos.coords.longitude.toFixed(6);
+            document.getElementById('location').value = loc;
+            document.getElementById('gps-badge').textContent = "LAT: " + pos.coords.latitude.toFixed(6) + " | LNG: " + pos.coords.longitude.toFixed(6) + " (±" + Math.round(pos.coords.accuracy) + "m)";
+        }, err => console.log(err), { enableHighAccuracy: true });
+    }
+</script>
 </body>
 </html>
