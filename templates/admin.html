@@ -8,14 +8,24 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background-color: #0b0f19; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; }
-        .table-dark-custom { background-color: #111827; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden; }
-        .table-dark-custom th { background-color: #1f2937; color: #9ca3af; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .table-dark-custom td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .evidence-thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1.5px solid #38bdf8; transition: transform 0.2s; }
-        .evidence-thumb:hover { transform: scale(1.15); box-shadow: 0 0 12px rgba(56,189,248,0.6); }
+        .stat-card { background: #111827; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 18px; text-align: center; }
+        .filter-bar { background: #111827; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 16px; margin-bottom: 16px; }
+        .table-custom { background-color: #111827; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden; }
+        .table-custom th { background-color: #1f2937; color: #9ca3af; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .table-custom td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .evidence-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid #38bdf8; }
+        .badge-pending { background-color: #eab308; color: #000; font-weight: 600; }
+        .badge-resolved { background-color: #10b981; color: #fff; font-weight: 600; }
+        .badge-denied { background-color: #ef4444; color: #fff; font-weight: 600; }
+        .btn-deny { background-color: #dc2626; color: white; border: none; font-size: 11px; padding: 4px 10px; border-radius: 6px; text-decoration: none; }
+        .btn-deny:hover { background-color: #b91c1c; color: white; }
+        .btn-upload-proof { background-color: #f59e0b; color: #000; font-weight: 600; font-size: 11px; padding: 4px 10px; border-radius: 6px; border: none; text-decoration: none; }
+        .btn-upload-proof:hover { background-color: #d97706; color: #000; }
     </style>
 </head>
 <body class="p-4">
+
+    <!-- Top Bar -->
     <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary">
         <div>
             <h4 class="fw-bold text-white m-0"><i class="fa-solid fa-shield-halved text-info me-2"></i>Officer Dispatch Triage Panel</h4>
@@ -27,7 +37,61 @@
         </div>
     </div>
 
-    <div class="table-responsive table-dark-custom shadow">
+    <!-- Status Tabs -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <span class="text-secondary small text-uppercase">TOTAL ACTIVE</span>
+                <h4 class="fw-bold text-white m-0">{{ total_count }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-warning">
+                <span class="text-warning small text-uppercase fw-bold">PENDING ACTION</span>
+                <h4 class="fw-bold text-warning m-0">{{ pending_count }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-success">
+                <span class="text-success small text-uppercase fw-bold">RESOLVED WITH PROOF</span>
+                <h4 class="fw-bold text-success m-0">{{ resolved_count }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-danger">
+                <span class="text-danger small text-uppercase fw-bold">DELETED / DENIED</span>
+                <h4 class="fw-bold text-danger m-0">{{ denied_count }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <div>
+                <label class="text-secondary small mb-1 d-block"><i class="fa-solid fa-calendar me-1"></i> CHANGE DATE:</label>
+                <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="dd.mm.yyyy" style="width: 140px;">
+            </div>
+            <div>
+                <label class="text-secondary small mb-1 d-block"><i class="fa-solid fa-building me-1"></i> FILTER DEPARTMENT:</label>
+                <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 220px;">
+                    <option selected>All Departments</option>
+                    <option>Roads &amp; Public Works</option>
+                    <option>Water &amp; Sanitation</option>
+                    <option>Sanitation &amp; Waste Management</option>
+                    <option>Electricity &amp; Street Lighting</option>
+                    <option>Town Planning &amp; Enforcement</option>
+                </select>
+            </div>
+        </div>
+        <div>
+            <label class="text-secondary small mb-1 d-block"><i class="fa-solid fa-arrow-down-short-wide me-1"></i> SORT BY:</label>
+            <button class="btn btn-outline-secondary btn-sm text-white"><i class="fa-solid fa-clock me-1"></i> Newest First</button>
+        </div>
+    </div>
+
+    <!-- Grievances Table -->
+    <div class="table-responsive table-custom shadow">
         <table class="table table-dark table-hover m-0 align-middle">
             <thead>
                 <tr>
@@ -39,6 +103,7 @@
                     <th>PRIORITY</th>
                     <th>CITIZEN EVIDENCE</th>
                     <th>STATUS</th>
+                    <th>WORK PROOF</th>
                     <th>OFFICER ACTION</th>
                 </tr>
             </thead>
@@ -58,27 +123,28 @@
 
                     <td>
                         <div class="fw-semibold text-white mb-1">{{ c.description }}</div>
-                        <div class="text-success small font-monospace"><i class="fa-solid fa-location-dot text-danger me-1"></i> {{ c.location }}</div>
+                        <div class="small text-secondary"><i class="fa-solid fa-location-dot text-danger me-1"></i> {{ c.location }}</div>
                     </td>
 
                     <td>
-                        <span class="badge bg-primary bg-opacity-25 text-info border border-primary border-opacity-50">{{ c.department }}</span>
+                        <span class="badge bg-dark text-info border border-info border-opacity-50 font-monospace">{{ c.department }}</span>
                     </td>
 
                     <td>
                         {% if c.priority == 'Critical' or c.priority == 'High' %}
-                            <span class="badge bg-danger bg-opacity-25 text-danger border border-danger">{{ c.priority }}</span>
+                            <span class="badge bg-danger bg-opacity-25 text-danger border border-danger">HIGH</span>
                         {% elif c.priority == 'Medium' %}
-                            <span class="badge bg-warning bg-opacity-25 text-warning border border-warning">Medium</span>
+                            <span class="badge bg-warning bg-opacity-25 text-warning border border-warning">MEDIUM</span>
                         {% else %}
-                            <span class="badge bg-info bg-opacity-25 text-info border border-info">Low</span>
+                            <span class="badge bg-info bg-opacity-25 text-info border border-info">LOW</span>
                         {% endif %}
                     </td>
 
+                    <!-- Citizen Evidence Image Thumbnail -->
                     <td class="text-center">
                         {% if c.damage_media and c.damage_media != '' and c.damage_media != 'None' %}
-                            <a href="/static/uploads/{{ c.damage_media }}" target="_blank" title="Click to view full image">
-                                <img src="/static/uploads/{{ c.damage_media }}" alt="Evidence" class="evidence-thumb">
+                            <a href="/static/uploads/{{ c.damage_media }}" target="_blank" title="View Captured Photo">
+                                <img src="/static/uploads/{{ c.damage_media }}" alt="Evidence" class="evidence-img shadow">
                             </a>
                         {% else %}
                             <span class="badge bg-secondary text-white-50" style="font-size: 10px;">No File</span>
@@ -87,25 +153,41 @@
 
                     <td>
                         {% if c.status == 'Resolved' %}
-                            <span class="badge bg-success"><i class="fa-solid fa-check-double me-1"></i> Resolved</span>
-                        {% elif c.status == 'Under Inspection' %}
-                            <span class="badge bg-info text-dark"><i class="fa-solid fa-magnifying-glass me-1"></i> Under Inspection</span>
+                            <span class="badge badge-resolved"><i class="fa-solid fa-check me-1"></i> Resolved</span>
+                        {% elif c.status == 'Denied' %}
+                            <span class="badge badge-denied"><i class="fa-solid fa-ban me-1"></i> Denied</span>
                         {% else %}
-                            <span class="badge bg-warning text-dark"><i class="fa-solid fa-clock me-1"></i> Pending</span>
+                            <span class="badge badge-pending"><i class="fa-solid fa-clock me-1"></i> Pending</span>
                         {% endif %}
                     </td>
 
                     <td>
-                        <button class="btn btn-warning btn-sm py-1 px-2 fw-semibold" style="font-size: 11px;"><i class="fa-solid fa-upload me-1"></i> Upload Proof</button>
+                        {% if c.resolution_media and c.resolution_media != '' %}
+                            <a href="/static/work_proofs/{{ c.resolution_media }}" target="_blank" class="badge bg-success text-decoration-none">View Proof</a>
+                        {% else %}
+                            <span class="text-secondary small">Awaiting</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if c.status != 'Resolved' and c.status != 'Denied' %}
+                            <a href="/resolve/{{ c.ticket_id }}" class="btn-upload-proof me-1"><i class="fa-solid fa-upload me-1"></i> Upload Proof</a>
+                            <a href="/deny/{{ c.ticket_id }}" class="btn-deny" onclick="return confirm('Are you sure you want to deny this ticket?');"><i class="fa-solid fa-trash me-1"></i> Deny</a>
+                        {% elif c.status == 'Resolved' %}
+                            <span class="text-success small fw-semibold"><i class="fa-solid fa-check-double me-1"></i> Resolved</span>
+                        {% else %}
+                            <span class="text-danger small fw-semibold"><i class="fa-solid fa-xmark me-1"></i> Denied</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="9" class="text-center text-secondary py-4">No active grievances logged yet.</td>
+                    <td colspan="10" class="text-center text-secondary py-4">No active grievances logged.</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+
 </body>
 </html>
