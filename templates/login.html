@@ -3,130 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Officer Dispatch Login - CivicAI</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Officer Dispatch Login | CivicAI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         body {
-            background: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #1e1b4b 100%);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #0b1120 0%, #0f172a 50%, #1e1b4b 100%);
+            color: #f8fafc;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
-            color: #f8fafc;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
-        .auth-card {
-            background: #161f30;
+        .login-card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
             border-radius: 20px;
-            border: 1px solid #232f48;
-            max-width: 440px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            max-width: 420px;
             width: 100%;
-            padding: 32px 28px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
         }
         .form-control {
-            background: #0d1525;
-            border: 1px solid #283756;
-            color: #f8fafc;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #ffffff !important;
             border-radius: 10px;
-            padding: 11px 14px;
         }
         .form-control:focus {
-            background: #0d1525;
-            border-color: #6366f1;
-            color: #ffffff;
-            box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25);
-        }
-        .input-group-text {
-            background: #0d1525;
-            border: 1px solid #283756;
-            color: #94a3b8;
-            border-radius: 10px 0 0 10px;
-        }
-        .btn-login {
-            background: linear-gradient(135deg, #6366f1, #4f46e5);
-            border: none;
-            border-radius: 10px;
-            padding: 12px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            color: #ffffff;
-            transition: all 0.2s ease;
-        }
-        .btn-login:hover {
-            background: linear-gradient(135deg, #4f46e5, #4338ca);
-            color: #ffffff;
-        }
-        .secure-badge {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid #232f48;
-            border-radius: 10px;
-            padding: 10px 12px;
+            background-color: #0f172a;
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25);
         }
     </style>
 </head>
 <body>
 
-<div class="auth-card">
+<div class="login-card p-4 p-md-5">
     <div class="text-center mb-4">
-        <i class="fa-solid fa-shield-halved fa-3x text-warning mb-2"></i>
-        <h4 class="fw-bold text-white m-0">Officer Dispatch Login</h4>
-        <p class="text-secondary small mt-1">Municipal Authority & Grievance Cell</p>
+        <div class="d-inline-flex align-items-center justify-content-center bg-warning bg-opacity-10 text-warning rounded-circle mb-3" style="width: 65px; height: 65px;">
+            <i class="bi bi-shield-fill fs-2"></i>
+        </div>
+        <h4 class="fw-bold text-white mb-1">Officer Dispatch Login</h4>
+        <p class="text-secondary small mb-0">Municipal Authority & Grievance Cell</p>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category if category != 'error' else 'danger' }} py-2 small mb-3 border-0">
-                    <i class="fa-solid fa-circle-info me-1"></i> {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
     {% if error %}
-        <div class="alert alert-danger py-2 small mb-3 border-0">
-            <i class="fa-solid fa-triangle-exclamation me-1"></i> {{ error }}
-        </div>
+    <div class="alert alert-danger py-2 small mb-3 text-center">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ error }}
+    </div>
     {% endif %}
 
-    <form action="/login" method="POST">
+    <form method="POST" action="/login">
         <div class="mb-3">
-            <label class="form-label small text-secondary fw-semibold">OFFICER USERNAME</label>
+            <label class="form-label text-secondary small fw-bold">OFFICER USERNAME / ID</label>
             <div class="input-group">
-                <span class="input-group-text"><i class="fa-solid fa-user-shield"></i></span>
-                <input type="text" name="username" class="form-control" placeholder="Enter official username" required autocomplete="off">
+                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-person"></i></span>
+                <input type="text" name="officer_id" class="form-control" placeholder="officer" required>
             </div>
         </div>
 
         <div class="mb-4">
-            <label class="form-label small text-secondary fw-semibold">PASSWORD</label>
+            <label class="form-label text-secondary small fw-bold">PASSWORD</label>
             <div class="input-group">
-                <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                <input type="password" name="password" class="form-control" placeholder="Enter secure password" required>
+                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-lock"></i></span>
+                <input type="password" name="password" class="form-control" placeholder="admin123" required>
             </div>
         </div>
 
-        <button type="submit" class="btn btn-login w-100 shadow-sm mb-3">
-            <i class="fa-solid fa-right-to-bracket me-1"></i> Access Officer Dashboard
+        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow">
+            <i class="bi bi-box-arrow-in-right me-1"></i> Access Officer Dashboard
         </button>
+
+        <div class="text-center mt-3">
+            <a href="/" class="text-secondary text-decoration-none small">
+                <i class="bi bi-arrow-left"></i> Return to Citizen Portal
+            </a>
+        </div>
     </form>
-
-    <div class="secure-badge text-center mt-3">
-        <small class="text-secondary d-block" style="font-size: 11.5px; line-height: 1.5;">
-            <i class="fa-solid fa-lock text-warning me-1"></i> <strong>Restricted Department Access</strong><br>
-            Public registration is permanently closed.<br>
-            Authorized officer credentials are provisioned by Nodal Admin.
-        </small>
-    </div>
-
-    <div class="text-center mt-3">
-        <a href="/" class="text-decoration-none text-info small">
-            <i class="fa-solid fa-arrow-left me-1"></i> Return to Citizen Portal
-        </a>
-    </div>
 </div>
 
 </body>

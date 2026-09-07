@@ -301,21 +301,25 @@ def register():
 def login():
     error = None
     if request.method == 'POST':
-        officer_id = request.form.get('officer_id', '').strip().lower()
-        password = request.form.get('password', '').strip()
+        # Accept either officer_id or username
+        uid = (request.form.get('officer_id') or request.form.get('username') or '').strip().lower()
+        pwd = (request.form.get('password') or '').strip()
 
-        # Direct Hardcoded Match + Database Match
-        if (officer_id == "officer" or officer_id == "officer@civic.gov" or officer_id == "admin@civic.gov") and (password == "admin123" or password == "CivicAdmin@2026"):
+        # Direct Hardcoded Match
+        valid_users = ["officer", "officer@civic.gov", "admin@civic.gov", "admin"]
+        valid_passes = ["admin123", "civicadmin@2026", "admin"]
+
+        if uid in valid_users and pwd in valid_passes:
             session['officer_logged_in'] = True
             session['officer_name'] = "Chief Officer"
             session['officer_dept'] = "Municipal Administration"
             return redirect(url_for('admin_panel'))
 
-        # Check DB for newly registered officers
+        # Check DB records
         conn = sqlite3.connect(DB_NAME)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        cur.execute("SELECT * FROM officers WHERE LOWER(officer_id) = ? AND password = ?", (officer_id, password))
+        cur.execute("SELECT * FROM officers WHERE LOWER(officer_id) = ? AND password = ?", (uid, pwd))
         officer = cur.fetchone()
         conn.close()
 
@@ -328,6 +332,7 @@ def login():
             error = "Invalid credentials. Use ID: officer | Pass: admin123"
 
     return render_template('login.html', error=error)
+
 @app.route('/logout')
 def logout():
     session.clear()
