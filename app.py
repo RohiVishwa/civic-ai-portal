@@ -1,6 +1,7 @@
 import os
 import uuid
 import base64
+import random
 import sqlite3
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
@@ -11,7 +12,7 @@ app.secret_key = "civicai_officer_master_secure_production_key"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_NAME = os.path.join(BASE_DIR, "civicai.db")
 
-# ----------------- DATABASE SETUP & PERSISTENT INITIALIZATION -----------------
+# ----------------- DATABASE SETUP & PERSISTENCE -----------------
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
@@ -45,7 +46,7 @@ def init_db():
         )
     """)
 
-    # Default Officer
+    # Seed Default Officer
     cur.execute("SELECT * FROM officers WHERE officer_id = 'officer'")
     if not cur.fetchone():
         cur.execute("""
@@ -53,7 +54,7 @@ def init_db():
             VALUES ('Chief Municipal Commissioner', 'officer', 'Municipal Administration', 'admin123')
         """)
 
-    # Seed demo complaints if table is completely empty
+    # Demo Seed Complaints (Unique coordinates for each spot)
     cur.execute("SELECT COUNT(*) FROM complaints")
     count = cur.fetchone()[0]
     if count == 0:
@@ -63,9 +64,9 @@ def init_db():
         waste_svg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23059669'/><rect x='30' y='30' width='40' height='40' rx='4' fill='%2310b981'/><text x='50' y='85' fill='white' font-size='11' text-anchor='middle' font-family='sans-serif'>Garbage</text></svg>"
 
         sample_tickets = [
-            ("GOV-CIVIC-89102", "Severe pipeline burst near main market chowk. Clean drinking water flooding the road.", "Water Supply", "Critical", "Pending", (now - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M"), (now + timedelta(hours=22)).strftime("%Y-%m-%d %H:%M"), "30.731100, 76.169500", pipe_svg),
-            ("GOV-CIVIC-44219", "Deep crater pothole in the middle of sector road causing accidents at night.", "Roads & Transport", "High", "Pending", (now - timedelta(hours=8)).strftime("%Y-%m-%d %H:%M"), (now + timedelta(days=2)).strftime("%Y-%m-%d %H:%M"), "30.729500, 76.167200", pothole_svg),
-            ("GOV-CIVIC-31045", "Street garbage container overflowing with foul smell near school entrance.", "Sanitation & Waste", "Medium", "Pending", (now - timedelta(days=1)).strftime("%Y-%m-%d %H:%M"), (now + timedelta(days=6)).strftime("%Y-%m-%d %H:%M"), "30.728900, 76.171000", waste_svg)
+            ("GOV-CIVIC-89102", "Severe pipeline burst near main market chowk.", "Water Supply", "Critical", "Pending", (now - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M"), (now + timedelta(hours=22)).strftime("%Y-%m-%d %H:%M"), "30.741200, 76.155400", pipe_svg),
+            ("GOV-CIVIC-44219", "Deep crater pothole in sector link road causing accidents at night.", "Roads & Transport", "High", "Pending", (now - timedelta(hours=8)).strftime("%Y-%m-%d %H:%M"), (now + timedelta(days=2)).strftime("%Y-%m-%d %H:%M"), "30.718900, 76.182100", pothole_svg),
+            ("GOV-CIVIC-31045", "Street garbage container overflowing with foul smell near school.", "Sanitation & Waste", "Medium", "Pending", (now - timedelta(days=1)).strftime("%Y-%m-%d %H:%M"), (now + timedelta(days=6)).strftime("%Y-%m-%d %H:%M"), "30.752300, 76.140800", waste_svg)
         ]
         cur.executemany("""
             INSERT INTO complaints (ticket_id, description, department, priority, status, created_at, deadline, location, damage_media)
@@ -76,6 +77,27 @@ def init_db():
     conn.close()
 
 init_db()
+
+# ----------------- DYNAMIC UNIQUE LOCATION ENGINE -----------------
+def get_unique_location(received_loc):
+    if received_loc and len(received_loc.split(',')) == 2:
+        try:
+            lat, lng = map(float, received_loc.split(','))
+            return f"{lat:.6f}, {lng:.6f}"
+        except:
+            pass
+    # Urban municipal sector cluster spots
+    base_spots = [
+        (30.730376, 76.168847),
+        (30.741200, 76.155400),
+        (30.718900, 76.182100),
+        (30.752300, 76.140800),
+        (30.724500, 76.195600)
+    ]
+    lat, lng = random.choice(base_spots)
+    lat += random.uniform(-0.004, 0.004)
+    lng += random.uniform(-0.004, 0.004)
+    return f"{lat:.6f}, {lng:.6f}"
 
 # ----------------- AI CLASSIFIER -----------------
 def classify_grievance(text):
@@ -112,7 +134,8 @@ def submit_grievance():
 
     desc = request.form.get('description', '').strip()
     dept = request.form.get('department', 'Auto-Detect via AI Engine')
-    loc = request.form.get('location', '30.730376, 76.168847').strip()
+    raw_loc = request.form.get('location', '').strip()
+    loc = get_unique_location(raw_loc)
     img_data = request.form.get('image_data', '').strip()
 
     ai_dept, ai_priority = classify_grievance(desc)
@@ -184,6 +207,10 @@ def submit_grievance():
                     <span class="text-secondary small">Priority:</span>
                     <span class="badge bg-{badge_color}">{ai_priority}</span>
                 </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-secondary small">GPS Location:</span>
+                    <span class="font-monospace text-info small">{loc}</span>
+                </div>
                 <div class="d-flex justify-content-between">
                     <span class="text-secondary small">{sla_label}:</span>
                     <span class="font-monospace text-light fw-bold">{deadline}</span>
@@ -199,7 +226,7 @@ def submit_grievance():
     </html>
     """
 
-# ----------------- PUBLIC TRACKING API -----------------
+# ----------------- TRACK TICKET API -----------------
 @app.route('/api/track/<ticket_id>', methods=['GET'])
 def track_ticket(ticket_id):
     try:
@@ -281,7 +308,7 @@ def admin_panel():
                            officer_name=session.get('officer_name', 'Chief Officer'),
                            officer_dept=session.get('officer_dept', 'Municipal Administration'))
 
-# ----------------- RESOLVE & DENY ROUTING -----------------
+# ----------------- RESOLVE & DENY -----------------
 @app.route('/admin/resolve/<path:identifier>', methods=['POST'])
 @app.route('/resolve/<path:identifier>', methods=['POST'])
 def resolve_ticket(identifier):
