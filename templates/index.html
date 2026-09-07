@@ -393,21 +393,42 @@ function takeSnapshot() {
     alert("✓ Live evidence snapshot captured and GPS tagged!");
 }
 
-// 3. GPS ACQUISITION
+;
+      // LIVE GPS ENGINE (Dynamic & High Accuracy)
 function acquireGPS() {
-    if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition((pos) => {
+    if (!("geolocation" in navigator)) {
+        console.warn("Geolocation API not supported");
+        return;
+    }
+
+    const options = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+    };
+
+    navigator.geolocation.watchPosition(
+        (pos) => {
             const lat = pos.coords.latitude.toFixed(6);
             const lng = pos.coords.longitude.toFixed(6);
-            document.getElementById("lat_disp").innerText = lat;
-            document.getElementById("lng_disp").innerText = lng;
-            document.getElementById("complaint_location").value = `${lat}, ${lng}`;
-        }, (err) => {
-            console.log("GPS bypass:", err.message);
-        });
-    }
-}
+            const accuracy = Math.round(pos.coords.accuracy);
 
+            const latD = document.getElementById("lat_disp");
+            const lngD = document.getElementById("lng_disp");
+            const locInp = document.getElementById("complaint_location");
+
+            if (latD) latD.innerText = lat;
+            if (lngD) lngD.innerText = lng;
+            if (locInp) locInp.value = `${lat}, ${lng}`;
+            
+            console.log(`GPS Locked: ${lat}, ${lng} (±${accuracy}m)`);
+        },
+        (err) => {
+            console.warn("GPS Access Failed:", err.message);
+        },
+        options
+    );
+}
 // 4. PUBLIC TICKET TRACKING
 async function checkGrievanceStatus() {
     const tidInput = document.getElementById("track_ticket_input");
