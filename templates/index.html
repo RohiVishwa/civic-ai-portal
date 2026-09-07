@@ -15,6 +15,19 @@
 </head>
 <body>
 <div class="container py-4">
+
+        <!-- PUBLIC TICKET TRACKING SECTION -->
+        <div class="card bg-dark border-secondary text-white my-4 p-3 rounded-4 shadow-sm" id="civic-track-box">
+            <h5 class="fw-bold text-info mb-2"><i class="bi bi-search"></i> Track Your Grievance Status</h5>
+            <p class="text-secondary small mb-3">Enter your Ticket ID (e.g., GOV-CIVIC-XXXXX) to check real-time progress.</p>
+            <div class="input-group">
+                <input type="text" id="track_ticket_input" class="form-control bg-black text-white border-secondary" placeholder="Enter Ticket ID...">
+                <button class="btn btn-info px-4 fw-bold" type="button" onclick="checkGrievanceStatus()">Track Status</button>
+            </div>
+            <div id="track_result" class="mt-3 d-none"></div>
+        </div>
+        <hr class="border-secondary my-4">
+    
     <div class="card card-custom p-4">
         
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -113,7 +126,14 @@
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
+        // Auto-Compress Snap
+        const maxW = 1080;
+        let scale = Math.min(1, maxW / (video.videoWidth || 1080));
+        canvas.width = (video.videoWidth || 1080) * scale;
+        canvas.height = (video.videoHeight || 720) * scale;
         const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
         const b64 = document.getElementById('image_base64');

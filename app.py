@@ -240,6 +240,34 @@ def deny_ticket(ticket_id):
     conn.close()
     return redirect('/admin')
 
+
+@app.route('/api/track/<ticket_id>', methods=['GET'])
+def track_ticket(ticket_id):
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT ticket_id, department, priority, status, created_at, deadline, damage_media, resolution_media, location FROM complaints WHERE ticket_id = ?", (ticket_id.strip(),))
+        row = cur.fetchone()
+        conn.close()
+        if row:
+            return jsonify({
+                "found": True,
+                "ticket_id": row["ticket_id"],
+                "department": row["department"],
+                "priority": row["priority"],
+                "status": row["status"],
+                "created_at": row["created_at"],
+                "deadline": row["deadline"],
+                "damage_media": row["damage_media"],
+                "resolution_media": row["resolution_media"],
+                "location": row["location"]
+            })
+        return jsonify({"found": False, "msg": "Ticket not found."})
+    except Exception as e:
+        return jsonify({"found": False, "msg": str(e)})
+
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5001))
     app.run(host='0.0.0.0', port=port, debug=True)
