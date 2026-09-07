@@ -6,17 +6,16 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 
 app = Flask(__name__)
-app.secret_key = "civicai_officer_secure_session_key_production"
+app.secret_key = "civicai_officer_master_secure_production_key"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_NAME = os.path.join(BASE_DIR, "civicai.db")
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ----------------- DATABASE INITIALIZATION & AUTO-SEED -----------------
+# ----------------- DATABASE SETUP & PERSISTENT INITIALIZATION -----------------
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
+    
     # Complaints Table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS complaints (
@@ -34,6 +33,7 @@ def init_db():
             denial_reason TEXT
         )
     """)
+    
     # Officers Table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS officers (
@@ -45,7 +45,7 @@ def init_db():
         )
     """)
 
-    # Seed Default Officer
+    # Default Officer
     cur.execute("SELECT * FROM officers WHERE officer_id = 'officer'")
     if not cur.fetchone():
         cur.execute("""
@@ -53,45 +53,19 @@ def init_db():
             VALUES ('Chief Municipal Commissioner', 'officer', 'Municipal Administration', 'admin123')
         """)
 
-    # Check complaints count; agar empty hai toh sample data load karein
+    # Seed demo complaints if table is completely empty
     cur.execute("SELECT COUNT(*) FROM complaints")
     count = cur.fetchone()[0]
     if count == 0:
         now = datetime.now()
+        pipe_svg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%230284c7'/><circle cx='50' cy='50' r='20' fill='%2338bdf8'/><text x='50' y='85' fill='white' font-size='11' text-anchor='middle' font-family='sans-serif'>Water Pipe</text></svg>"
+        pothole_svg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23334155'/><ellipse cx='50' cy='50' rx='35' ry='18' fill='%230f172a'/><text x='50' y='85' fill='white' font-size='11' text-anchor='middle' font-family='sans-serif'>Road Crater</text></svg>"
+        waste_svg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23059669'/><rect x='30' y='30' width='40' height='40' rx='4' fill='%2310b981'/><text x='50' y='85' fill='white' font-size='11' text-anchor='middle' font-family='sans-serif'>Garbage</text></svg>"
+
         sample_tickets = [
-            (
-                "GOV-CIVIC-89102",
-                "Severe pipeline burst near main market chowk. Clean drinking water flooding the road since morning.",
-                "Water Supply",
-                "Critical",
-                "Pending",
-                (now - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M"),
-                (now + timedelta(hours=22)).strftime("%Y-%m-%d %H:%M"),
-                "30.731100, 76.169500",
-                "https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?w=300&q=80"
-            ),
-            (
-                "GOV-CIVIC-44219",
-                "Deep crater pothole in the middle of sector road causing severe two-wheeler accidents at night.",
-                "Roads & Transport",
-                "High",
-                "Pending",
-                (now - timedelta(hours=8)).strftime("%Y-%m-%d %H:%M"),
-                (now + timedelta(days=2)).strftime("%Y-%m-%d %H:%M"),
-                "30.729500, 76.167200",
-                "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=300&q=80"
-            ),
-            (
-                "GOV-CIVIC-31045",
-                "Street garbage container overflowing with foul smell spreading near public school entrance.",
-                "Sanitation & Waste",
-                "Medium",
-                "Pending",
-                (now - timedelta(days=1)).strftime("%Y-%m-%d %H:%M"),
-                (now + timedelta(days=6)).strftime("%Y-%m-%d %H:%M"),
-                "30.728900, 76.171000",
-                "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=300&q=80"
-            )
+            ("GOV-CIVIC-89102", "Severe pipeline burst near main market chowk. Clean drinking water flooding the road.", "Water Supply", "Critical", "Pending", (now - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M"), (now + timedelta(hours=22)).strftime("%Y-%m-%d %H:%M"), "30.731100, 76.169500", pipe_svg),
+            ("GOV-CIVIC-44219", "Deep crater pothole in the middle of sector road causing accidents at night.", "Roads & Transport", "High", "Pending", (now - timedelta(hours=8)).strftime("%Y-%m-%d %H:%M"), (now + timedelta(days=2)).strftime("%Y-%m-%d %H:%M"), "30.729500, 76.167200", pothole_svg),
+            ("GOV-CIVIC-31045", "Street garbage container overflowing with foul smell near school entrance.", "Sanitation & Waste", "Medium", "Pending", (now - timedelta(days=1)).strftime("%Y-%m-%d %H:%M"), (now + timedelta(days=6)).strftime("%Y-%m-%d %H:%M"), "30.728900, 76.171000", waste_svg)
         ]
         cur.executemany("""
             INSERT INTO complaints (ticket_id, description, department, priority, status, created_at, deadline, location, damage_media)
@@ -103,10 +77,9 @@ def init_db():
 
 init_db()
 
-# ----------------- AI CLASSIFICATION ENGINE -----------------
+# ----------------- AI CLASSIFIER -----------------
 def classify_grievance(text):
     text_lower = text.lower()
-    
     priority = "Medium"
     if any(w in text_lower for w in ["urgent", "danger", "burst", "shock", "fire", "spark", "accident", "overflowing", "deadly", "emergency", "current"]):
         priority = "Critical"
@@ -139,21 +112,14 @@ def submit_grievance():
 
     desc = request.form.get('description', '').strip()
     dept = request.form.get('department', 'Auto-Detect via AI Engine')
-    loc = request.form.get('location', '30.730376, 76.168847')
-    img_data = request.form.get('image_data', '')
+    loc = request.form.get('location', '30.730376, 76.168847').strip()
+    img_data = request.form.get('image_data', '').strip()
 
     ai_dept, ai_priority = classify_grievance(desc)
     final_dept = ai_dept if dept == "Auto-Detect via AI Engine" else dept
 
     ticket_num = str(uuid.uuid4().int)[:5]
     ticket_id = f"GOV-CIVIC-{ticket_num}"
-
-    # Agar image Base64 data hai toh directly save karein taaki Render file loss na ho
-    saved_media = ""
-    if img_data and "base64," in img_data:
-        saved_media = img_data
-    elif img_data:
-        saved_media = img_data
 
     now = datetime.now()
     created_at = now.strftime("%Y-%m-%d %H:%M")
@@ -176,7 +142,7 @@ def submit_grievance():
     cur.execute("""
         INSERT INTO complaints (ticket_id, description, department, priority, status, created_at, deadline, location, damage_media)
         VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?)
-    """, (ticket_id, desc, final_dept, ai_priority, created_at, deadline, loc, saved_media))
+    """, (ticket_id, desc, final_dept, ai_priority, created_at, deadline, loc, img_data))
     conn.commit()
     conn.close()
 
@@ -190,83 +156,45 @@ def submit_grievance():
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
         <style>
-            body {{
-                background: linear-gradient(135deg, #0b1120 0%, #0f172a 50%, #1e1b4b 100%);
-                color: #f8fafc;
-                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-            }}
-            .res-card {{
-                background: #1e293b;
-                border: 1px solid #38bdf8;
-                border-radius: 20px;
-                box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.6);
-                max-width: 520px;
-                width: 100%;
-            }}
-            .ticket-badge {{
-                background: #0f172a;
-                border: 1px solid #334155;
-            }}
+            body {{ background: #0b1120; color: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; font-family: sans-serif; }}
+            .card-box {{ background: #1e293b; border: 1px solid #38bdf8; border-radius: 18px; max-width: 480px; width: 100%; }}
         </style>
     </head>
     <body>
-        <div class="res-card p-4 p-md-5 text-center shadow-lg">
-            <div class="d-inline-flex align-items-center justify-content-center bg-info bg-opacity-10 text-info rounded-circle mb-3" style="width: 70px; height: 70px;">
+        <div class="card-box p-4 text-center shadow-lg">
+            <div class="d-inline-flex p-3 rounded-circle bg-info bg-opacity-10 text-info mb-3">
                 <i class="bi bi-check-circle-fill fs-1 text-info"></i>
             </div>
+            <h4 class="fw-bold text-white mb-1">Grievance Dispatched</h4>
+            <p class="text-secondary small mb-3">Incident successfully locked and routed to municipal desk.</p>
             
-            <h3 class="fw-bold text-white mb-1">Grievance Dispatched</h3>
-            <p class="text-secondary small mb-4">AI auto-triage has locked coordinates and routed this issue to the municipal desk.</p>
-
-            <div class="ticket-badge p-3 rounded-3 text-start mb-4">
-                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary">
+            <div class="bg-dark p-3 rounded-3 text-start mb-3 border border-secondary">
+                <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="text-secondary small">Ticket ID:</span>
                     <div>
-                        <span class="text-info font-monospace fw-bold me-2" id="ticketIdTxt">{ticket_id}</span>
-                        <button class="btn btn-outline-secondary btn-sm py-0 px-2 text-light" onclick="copyTicket()" title="Copy to clipboard">
-                            <i class="bi bi-clipboard" id="copyIcon"></i>
-                        </button>
+                        <span class="text-info font-monospace fw-bold me-2">{ticket_id}</span>
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-2 text-white" onclick="navigator.clipboard.writeText('{ticket_id}'); alert('Ticket ID Copied!');"><i class="bi bi-clipboard"></i></button>
                     </div>
                 </div>
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex justify-content-between mb-2">
                     <span class="text-secondary small">Department:</span>
-                    <span class="fw-semibold text-light">{final_dept}</span>
+                    <span class="text-light fw-semibold">{final_dept}</span>
                 </div>
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-secondary small">Assigned Priority:</span>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-secondary small">Priority:</span>
                     <span class="badge bg-{badge_color}">{ai_priority}</span>
                 </div>
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between">
                     <span class="text-secondary small">{sla_label}:</span>
                     <span class="font-monospace text-light fw-bold">{deadline}</span>
                 </div>
             </div>
 
             <div class="d-grid gap-2">
-                <button onclick="window.print()" class="btn btn-outline-light py-2">
-                    <i class="bi bi-printer"></i> Print Acknowledgement Slip
-                </button>
-                <a href="/" class="btn btn-info fw-bold py-2">
-                    <i class="bi bi-arrow-left"></i> Back to Citizen Portal
-                </a>
+                <button onclick="window.print()" class="btn btn-outline-light"><i class="bi bi-printer"></i> Print Slip</button>
+                <a href="/" class="btn btn-info fw-bold"><i class="bi bi-arrow-left"></i> Return Home</a>
             </div>
         </div>
-
-        <script>
-        function copyTicket() {{
-            const tid = document.getElementById('ticketIdTxt').innerText;
-            navigator.clipboard.writeText(tid).then(() => {{
-                const icon = document.getElementById('copyIcon');
-                icon.className = 'bi bi-check2 text-success';
-                setTimeout(() => {{ icon.className = 'bi bi-clipboard'; }}, 2000);
-            }});
-        }}
-        </script>
     </body>
     </html>
     """
@@ -279,7 +207,7 @@ def track_ticket(ticket_id):
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         cur.execute("""
-            SELECT ticket_id, department, priority, status, created_at, deadline, damage_media, resolution_media, location 
+            SELECT ticket_id, department, priority, status, created_at, deadline, damage_media, resolution_media, denial_reason, location 
             FROM complaints WHERE ticket_id = ?
         """, (ticket_id.strip(),))
         row = cur.fetchone()
@@ -296,13 +224,14 @@ def track_ticket(ticket_id):
                 "deadline": row["deadline"],
                 "damage_media": row["damage_media"],
                 "resolution_media": row["resolution_media"],
+                "denial_reason": row["denial_reason"],
                 "location": row["location"]
             })
-        return jsonify({"found": False, "msg": "Ticket ID not found in municipal records."})
+        return jsonify({"found": False, "msg": "No ticket found with this ID."})
     except Exception as e:
         return jsonify({"found": False, "msg": str(e)})
 
-# ----------------- OFFICER AUTHENTICATION -----------------
+# ----------------- OFFICER AUTH -----------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
@@ -310,26 +239,10 @@ def login():
         uid = (request.form.get('officer_id') or request.form.get('username') or '').strip().lower()
         pwd = (request.form.get('password') or '').strip()
 
-        valid_users = ["officer", "officer@civic.gov", "admin@civic.gov", "admin"]
-        valid_passes = ["admin123", "civicadmin@2026", "admin"]
-
-        if uid in valid_users and pwd in valid_passes:
+        if (uid in ["officer", "officer@civic.gov", "admin"]) and (pwd in ["admin123", "civicadmin@2026"]):
             session['officer_logged_in'] = True
             session['officer_name'] = "Chief Officer"
             session['officer_dept'] = "Municipal Administration"
-            return redirect(url_for('admin_panel'))
-
-        conn = sqlite3.connect(DB_NAME)
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM officers WHERE LOWER(officer_id) = ? AND password = ?", (uid, pwd))
-        officer = cur.fetchone()
-        conn.close()
-
-        if officer:
-            session['officer_logged_in'] = True
-            session['officer_name'] = officer['name']
-            session['officer_dept'] = officer['department']
             return redirect(url_for('admin_panel'))
         else:
             error = "Invalid credentials. Use ID: officer | Pass: admin123"
@@ -368,7 +281,7 @@ def admin_panel():
                            officer_name=session.get('officer_name', 'Chief Officer'),
                            officer_dept=session.get('officer_dept', 'Municipal Administration'))
 
-# ----------------- UNIVERSAL RESOLVE & DENY HANDLERS -----------------
+# ----------------- RESOLVE & DENY ROUTING -----------------
 @app.route('/admin/resolve/<path:identifier>', methods=['POST'])
 @app.route('/resolve/<path:identifier>', methods=['POST'])
 def resolve_ticket(identifier):
@@ -376,11 +289,10 @@ def resolve_ticket(identifier):
         return redirect(url_for('login'))
 
     file = request.files.get('resolution_photo')
-    filename = ""
+    base64_proof = ""
     if file and file.filename != "":
-        clean_name = str(identifier).replace('/', '_')
-        filename = f"resolved_{clean_name}_{uuid.uuid4().hex[:6]}.jpg"
-        file.save(os.path.join(UPLOAD_FOLDER, filename))
+        encoded = base64.b64encode(file.read()).decode('utf-8')
+        base64_proof = f"data:image/jpeg;base64,{encoded}"
 
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
@@ -388,7 +300,7 @@ def resolve_ticket(identifier):
         UPDATE complaints 
         SET status = 'Resolved', resolution_media = ? 
         WHERE id = ? OR ticket_id = ?
-    """, (filename, identifier, identifier))
+    """, (base64_proof, identifier, identifier))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
@@ -399,7 +311,7 @@ def deny_ticket(identifier):
     if not session.get('officer_logged_in'):
         return redirect(url_for('login'))
 
-    reason = request.form.get('denial_reason', 'Spam / Out of Jurisdiction')
+    reason = request.form.get('denial_reason', 'Out of Jurisdiction')
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
     cur.execute("""
@@ -407,6 +319,26 @@ def deny_ticket(identifier):
         SET status = 'Denied', denial_reason = ? 
         WHERE id = ? OR ticket_id = ?
     """, (reason, identifier, identifier))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
+# ----------------- MANDATORY AUDITED DELETE -----------------
+@app.route('/admin/delete/<path:identifier>', methods=['POST'])
+@app.route('/delete/<path:identifier>', methods=['POST'])
+def delete_ticket(identifier):
+    if not session.get('officer_logged_in'):
+        return redirect(url_for('login'))
+
+    reason = request.form.get('delete_reason', '').strip()
+    if not reason:
+        reason = "Deleted without reason"
+
+    print(f"[AUDIT LOG] Officer {session.get('officer_name')} deleted ticket {identifier} | Justification: {reason}")
+
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM complaints WHERE id = ? OR ticket_id = ?", (identifier, identifier))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
