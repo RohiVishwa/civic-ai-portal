@@ -12,7 +12,6 @@
         #camera-feed { width: 100%; height: 260px; object-fit: cover; border-radius: 10px; background: #000; display: block; }
         #captured-preview { width: 100%; height: 260px; object-fit: cover; border-radius: 10px; display: none; }
     </style>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body>
 <div class="container py-4">
@@ -168,6 +167,41 @@
         }, err => console.log(err), { enableHighAccuracy: true });
     }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bundle.min.js"></script>
+
+<script>
+// SAFE NON-DESTRUCTIVE EVENT BINDING
+(function() {
+    console.log("CivicAI Safe Bridge Initialized");
+    
+    // Auto-fix Camera buttons if they are stuck
+    const buttons = document.querySelectorAll("button");
+    buttons.forEach(btn => {
+        const txt = (btn.textContent || "").toLowerCase();
+        if (txt.includes("switch camera") || txt.includes("open")) {
+            btn.addEventListener("click", function(e) {
+                if (typeof startCamera === "function") {
+                    startCamera();
+                } else if (typeof toggleCamera === "function") {
+                    toggleCamera();
+                }
+            });
+        }
+    });
+
+    // Enter key support for Tracker
+    const trackInput = document.getElementById("track_ticket_input");
+    if (trackInput) {
+        trackInput.addEventListener("keypress", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                if (typeof checkGrievanceStatus === "function") {
+                    checkGrievanceStatus();
+                }
+            }
+        });
+    }
+})();
+</script>
+
 </body>
 </html>
