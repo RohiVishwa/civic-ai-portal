@@ -148,17 +148,12 @@ def submit_grievance():
     ticket_num = str(uuid.uuid4().int)[:5]
     ticket_id = f"GOV-CIVIC-{ticket_num}"
 
-    saved_filename = ""
+    # Agar image Base64 data hai toh directly save karein taaki Render file loss na ho
+    saved_media = ""
     if img_data and "base64," in img_data:
-        try:
-            header, encoded = img_data.split("base64,", 1)
-            file_bytes = base64.b64decode(encoded)
-            saved_filename = f"{ticket_id}_{uuid.uuid4().hex[:6]}.jpg"
-            file_path = os.path.join(UPLOAD_FOLDER, saved_filename)
-            with open(file_path, "wb") as f:
-                f.write(file_bytes)
-        except Exception as e:
-            print("Image decode error:", e)
+        saved_media = img_data
+    elif img_data:
+        saved_media = img_data
 
     now = datetime.now()
     created_at = now.strftime("%Y-%m-%d %H:%M")
@@ -181,7 +176,7 @@ def submit_grievance():
     cur.execute("""
         INSERT INTO complaints (ticket_id, description, department, priority, status, created_at, deadline, location, damage_media)
         VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?)
-    """, (ticket_id, desc, final_dept, ai_priority, created_at, deadline, loc, saved_filename))
+    """, (ticket_id, desc, final_dept, ai_priority, created_at, deadline, loc, saved_media))
     conn.commit()
     conn.close()
 

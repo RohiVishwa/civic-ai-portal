@@ -115,27 +115,27 @@
                             {% endif %}
                         </td>
                         <td>
-                            <div class="d-flex align-items-center gap-2">
-                                {% if c.damage_media %}
-                                    {% if c.damage_media.startswith('http') %}
-                                        <a href="{{ c.damage_media }}" target="_blank">
-                                            <img src="{{ c.damage_media }}" class="evidence-thumb" alt="Ground Evidence">
-                                        </a>
-                                    {% else %}
-                                        <a href="/static/uploads/{{ c.damage_media }}" target="_blank">
-                                            <img src="/static/uploads/{{ c.damage_media }}" class="evidence-thumb" alt="Ground Evidence">
-                                        </a>
-                                    {% endif %}
-                                {% else %}
-                                    <div class="evidence-thumb d-flex align-items-center justify-content-center bg-black text-secondary" style="font-size: 10px;">No Snap</div>
-                                {% endif %}
-                                <div>
-                                    <a href="https://maps.google.com/?q={{ c.location }}" target="_blank" class="text-info text-decoration-none small fw-semibold">
-                                        <i class="bi bi-geo-alt-fill text-danger"></i> {{ c.location }} <i class="bi bi-box-arrow-up-right" style="font-size: 10px;"></i>
-                                    </a>
-                                </div>
-                            </div>
-                        </td>
+    <div class="d-flex align-items-center gap-2">
+        {% if c.damage_media %}
+            {% if c.damage_media.startswith('data:image') or c.damage_media.startswith('http') %}
+                <a href="{{ c.damage_media }}" target="_blank">
+                    <img src="{{ c.damage_media }}" class="evidence-thumb" alt="Ground Evidence">
+                </a>
+            {% else %}
+                <a href="/static/uploads/{{ c.damage_media }}" target="_blank">
+                    <img src="/static/uploads/{{ c.damage_media }}" class="evidence-thumb" alt="Ground Evidence">
+                </a>
+            {% endif %}
+        {% else %}
+            <div class="evidence-thumb d-flex align-items-center justify-content-center bg-black text-secondary" style="font-size: 10px;">No Snap</div>
+        {% endif %}
+        <div>
+            <a href="https://maps.google.com/?q={{ c.location }}" target="_blank" class="text-info text-decoration-none small fw-semibold">
+                <i class="bi bi-geo-alt-fill text-danger"></i> {{ c.location }} <i class="bi bi-box-arrow-up-right" style="font-size: 10px;"></i>
+            </a>
+        </div>
+    </div>
+</td>
                         <td style="max-width: 250px;">
                             <span class="small text-light">{{ c.description }}</span>
                         </td>
