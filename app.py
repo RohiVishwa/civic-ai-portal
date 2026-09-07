@@ -12,7 +12,6 @@ DB_FILE = "civic_records.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    # Base table creation
     cur.execute('''
         CREATE TABLE IF NOT EXISTS complaints (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,12 +22,16 @@ def init_db():
             location TEXT,
             deadline TEXT,
             status TEXT DEFAULT 'Pending Review',
-            image_data TEXT
+            image_data TEXT,
+            resolution_media TEXT,
+            resolution_notes TEXT,
+            deletion_reason TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     conn.commit()
 
-    # Dynamic column migrations (Prevents 500 error if DB schema changed)
+    # Dynamic schema migrations to prevent 500 errors
     existing_cols = [c[1] for c in cur.execute("PRAGMA table_info(complaints)").fetchall()]
     new_cols = {
         "resolution_media": "TEXT",
@@ -40,7 +43,7 @@ def init_db():
         if col not in existing_cols:
             try:
                 cur.execute(f"ALTER TABLE complaints ADD COLUMN {col} {col_type}")
-            except Exception as e:
+            except Exception:
                 pass
     conn.commit()
     conn.close()
@@ -49,13 +52,31 @@ init_db()
 
 def calculate_action_timeline(desc, selected_dept):
     desc_lower = (desc or "").lower()
-    critical_keywords = ['burst', 'leak', 'flood', 'shock', 'spark', 'fire', 'danger', 'hazard', 'deep crater', 'collapse', 'manhole']
-    high_keywords = ['overflow', 'blocked', 'pothole', 'garbage heap', 'smell', 'broken pole', 'jam']
+
+    # 1. CRITICAL EMERGENCY KEYWORDS (24h Target)
+    critical_keywords = [
+        'burst', 'leak', 'flooding', 'flood', 'shock', 'spark', 'current', 'wire', 
+        'danger', 'hazard', 'crater', 'deep', 'manhole', 'accident', 'severe', 
+        'collapse', 'poison', 'toxic', 'fire', 'khula', 'gehra', 'toota', 'emergency'
+    ]
+
+    # 2. HIGH PRIORITY KEYWORDS (48h Target)
+    high_keywords = [
+        'pothole', 'gaddha', 'road', 'sadak', 'garbage', 'kachra', 'waste', 'dump',
+        'smell', 'badbu', 'sewage', 'drain', 'nali', 'overflow', 'choke', 'blocked',
+        'water', 'paani', 'jal', 'nal', 'light', 'streetlight', 'dark', 'andhera',
+        'broken', 'damaged', 'pile', 'trash', 'kharaab', 'ganda'
+    ]
 
     priority = "Medium"
+
     if any(k in desc_lower for k in critical_keywords):
         priority = "Critical"
     elif any(k in desc_lower for k in high_keywords):
+        priority = "High"
+    elif selected_dept in ["Roads & Transport", "Water Supply", "Electricity & Power"]:
+        priority = "High"
+    elif len(desc_lower) > 5:
         priority = "High"
 
     now = datetime.now()
@@ -64,20 +85,21 @@ def calculate_action_timeline(desc, selected_dept):
         deadline_text = f"First Action Target: 24h ({target_time}) [Containment & Safety Lock]"
     elif priority == "High":
         target_time = (now + timedelta(days=2)).strftime("%d %b, %I:%M %p")
-        deadline_text = f"First Action Target: 48h ({target_time}) [Site Assessment & Crew Dispatch]"
+        deadline_text = f"First Action Target: 48h ({target_time}) [Crew Dispatch & Inspection]"
     else:
         target_time = (now + timedelta(days=5)).strftime("%d %b, %I:%M %p")
         deadline_text = f"Standard Target: 5–7 Days ({target_time}) [Routine Civil Works]"
 
+    # Smart Department Auto-Detection (Bilingual)
     dept = selected_dept
     if not selected_dept or selected_dept == "Auto-Detect via AI Engine":
-        if any(w in desc_lower for w in ['water', 'pipe', 'leak', 'jal', 'nal', 'drain']):
+        if any(w in desc_lower for w in ['water', 'pipe', 'leak', 'jal', 'nal', 'drain', 'paani', 'sewer', 'nalaa']):
             dept = "Water Supply & Drainage"
-        elif any(w in desc_lower for w in ['road', 'pothole', 'sadak', 'crater', 'traffic', 'divider']):
+        elif any(w in desc_lower for w in ['road', 'pothole', 'sadak', 'crater', 'gaddha', 'traffic', 'divider', 'path']):
             dept = "Roads & Civil Infrastructure"
-        elif any(w in desc_lower for w in ['garbage', 'trash', 'kachra', 'smell', 'sewage', 'safai', 'waste']):
+        elif any(w in desc_lower for w in ['garbage', 'trash', 'kachra', 'smell', 'sewage', 'safai', 'waste', 'badbu', 'gandagi']):
             dept = "Sanitation & Solid Waste"
-        elif any(w in desc_lower for w in ['light', 'wire', 'pole', 'current', 'bijli', 'power', 'dark']):
+        elif any(w in desc_lower for w in ['light', 'wire', 'pole', 'current', 'bijli', 'power', 'dark', 'andhera', 'taar']):
             dept = "Electricity & Street Lighting"
         else:
             dept = "Town Planning & Public Works"
@@ -88,15 +110,13 @@ def get_fine_tuned_location(raw_loc):
     if raw_loc and ',' in raw_loc:
         try:
             parts = raw_loc.split(',')
-            lat = float(parts[0].strip())
-            lng = float(parts[1].strip())
-            lat += random.uniform(-0.00015, 0.00015)
-            lng += random.uniform(-0.00015, 0.00015)
+            lat = float(parts[0].strip()) + random.uniform(-0.00015, 0.00015)
+            lng = float(parts[1].strip()) + random.uniform(-0.00015, 0.00015)
             return f"{lat:.6f}, {lng:.6f}"
         except Exception:
             pass
-    base_lat = 30.730376 + random.uniform(-0.004, 0.004)
-    base_lng = 76.168847 + random.uniform(-0.004, 0.004)
+    base_lat = 30.730376 + random.uniform(-0.003, 0.003)
+    base_lng = 76.168847 + random.uniform(-0.003, 0.003)
     return f"{base_lat:.6f}, {base_lng:.6f}"
 
 @app.route('/')
@@ -126,8 +146,7 @@ def submit_complaint():
 
         return render_template('index.html', submitted_ticket=ticket_id, dept=department, prio=priority, target=deadline_text)
     except Exception as e:
-        print(f"[ERROR IN SUBMIT] {e}")
-        # Graceful fallback so user NEVER sees 500 error
+        print(f"[SUBMIT ERROR] {e}")
         fallback_ticket = f"GOV-CIVIC-{random.randint(10000, 99999)}"
         return render_template('index.html', submitted_ticket=fallback_ticket, dept="Public Works", prio="High", target="Target: 48h [Under Review]")
 
@@ -136,7 +155,7 @@ def track_ticket(ticket_id):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
     cur.execute('''
-        SELECT ticket_id, department, priority, deadline, status, resolution_media, created_at
+        SELECT ticket_id, department, priority, deadline, status, resolution_media, created_at, image_data
         FROM complaints WHERE ticket_id = ?
     ''', (ticket_id,))
     row = cur.fetchone()
@@ -153,7 +172,7 @@ def track_ticket(ticket_id):
             "resolution_media": bool(row[5]),
             "created_at": row[6]
         })
-    return jsonify({"found": False, "msg": "Ticket record not found. Please verify ID."})
+    return jsonify({"found": False, "msg": "Ticket not found. Please verify ID."})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -187,49 +206,58 @@ def dashboard():
     complaints = cur.fetchall()
 
     total = len(complaints)
-    pending = sum(1 for c in complaints if c['status'] == 'Pending Review')
+    pending = sum(1 for c in complaints if c['status'] in ['Pending Review', 'Pending Action', 'Pending'])
     resolved = sum(1 for c in complaints if c['status'] == 'Resolved')
     denied = sum(1 for c in complaints if c['status'] == 'Denied')
     conn.close()
 
     return render_template('dashboard.html', complaints=complaints, total=total, pending=pending, resolved=resolved, denied=denied)
 
-@app.route('/resolve/<ticket_id>', methods=['GET', 'POST'])
-def resolve_ticket(ticket_id):
+@app.route('/resolve_modal/<ticket_id>', methods=['POST'])
+def resolve_modal(ticket_id):
     if not session.get('logged_in'):
         return redirect(url_for('login'))
 
+    resolution_notes = request.form.get('resolution_notes', 'Ground maintenance completed.')
+    resolution_media = request.form.get('resolution_media', '')
+
     conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
-
-    if request.method == 'POST':
-        resolution_notes = request.form.get('resolution_notes', '')
-        resolution_media = request.form.get('resolution_media', '')
-
-        cur.execute('''
-            UPDATE complaints
-            SET status = 'Resolved', resolution_notes = ?, resolution_media = ?
-            WHERE ticket_id = ?
-        ''', (resolution_notes, resolution_media, ticket_id))
-        conn.commit()
-        conn.close()
-        return redirect(url_for('dashboard'))
-
-    cur.execute("SELECT * FROM complaints WHERE ticket_id = ?", (ticket_id,))
-    complaint = cur.fetchone()
+    cur.execute('''
+        UPDATE complaints
+        SET status = 'Resolved', resolution_notes = ?, resolution_media = ?
+        WHERE ticket_id = ?
+    ''', (resolution_notes, resolution_media, ticket_id))
+    conn.commit()
     conn.close()
-    return render_template('resolve.html', complaint=complaint)
+    return redirect(url_for('dashboard'))
+
+@app.route('/deny/<ticket_id>', methods=['POST'])
+def deny_ticket(ticket_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    deny_reason = request.form.get('deny_reason', 'Spam or non-civic submission')
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute('''
+        UPDATE complaints
+        SET status = 'Denied', deletion_reason = ?
+        WHERE ticket_id = ?
+    ''', (deny_reason, ticket_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('dashboard'))
 
 @app.route('/delete/<ticket_id>', methods=['POST'])
 def delete_ticket(ticket_id):
     if not session.get('logged_in'):
         return redirect(url_for('login'))
 
-    reason = request.form.get('deletion_reason', 'Unspecified Administrative Audit')
+    reason = request.form.get('deletion_reason', 'Administrative cleanup verified.')
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    print(f"[AUDIT LOG] Ticket {ticket_id} Deleted by Officer. Justification: {reason}")
+    print(f"[AUDIT LOG] Ticket {ticket_id} Deleted. Reason: {reason}")
     cur.execute("DELETE FROM complaints WHERE ticket_id = ?", (ticket_id,))
     conn.commit()
     conn.close()

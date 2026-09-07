@@ -86,9 +86,9 @@
         <div id="trackResult" class="mt-3 d-none alert alert-dark border-secondary p-3 mb-0"></div>
     </div>
 
-    <!-- Complaint Form -->
+    <!-- Complaint Form with Snap Validation -->
     <div class="portal-card p-4 shadow-lg">
-        <form method="POST" action="/submit">
+        <form method="POST" action="/submit" onsubmit="return validateSnapBeforeSubmit();">
             
             <!-- Live Camera Evidence Section -->
             <div class="mb-3">
@@ -116,7 +116,7 @@
                     </button>
                 </div>
 
-                <!-- Hidden inputs for Form -->
+                <!-- Hidden inputs -->
                 <input type="hidden" name="image_data" id="image_data">
                 <input type="hidden" name="location" id="complaint_location">
                 <canvas id="snap_canvas" class="d-none"></canvas>
@@ -177,7 +177,7 @@ if ("geolocation" in navigator) {
     );
 }
 
-// Generates fine 10-25m realistic ground step variation on every snap
+// 10-25m realistic ground step variation
 function calculateStepCoordinates() {
     const stepOffsetLat = (Math.random() - 0.5) * 0.000300;
     const stepOffsetLng = (Math.random() - 0.5) * 0.000300;
@@ -221,7 +221,6 @@ function captureSnapshotWithGPS() {
         return;
     }
 
-    // Dynamic coordinates refresh on every snap click
     const finalCoords = calculateStepCoordinates();
     document.getElementById('complaint_location').value = finalCoords;
     document.getElementById('cameraGpsOverlay').innerHTML = `<i class="bi bi-geo-alt-fill text-danger"></i> GPS: ${finalCoords}`;
@@ -231,7 +230,7 @@ function captureSnapshotWithGPS() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, 640, 480);
 
-    // WATERMARK BANNER IN RAW PIXELS
+    // WATERMARK BANNER
     ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
     ctx.fillRect(0, 405, 640, 75);
 
@@ -261,7 +260,17 @@ function captureSnapshotWithGPS() {
     }
 }
 
-// Vernacular Voice Mic
+// Mandatory Snap Check before submit
+function validateSnapBeforeSubmit() {
+    const imgData = document.getElementById('image_data').value;
+    if (!imgData || imgData.trim() === "") {
+        alert("⚠️ Pehle 'Snap Geotagged Evidence' button daba kar photo capture karein! Bina photo evidence ke complaint dispatch nahi ho sakti.");
+        return false;
+    }
+    return true;
+}
+
+// Voice Mic (Web Speech API)
 function startVoiceInput() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -285,7 +294,7 @@ function startVoiceInput() {
     };
 }
 
-// Track Ticket API with Realistic Lifecycle
+// Track Ticket API
 async function trackTicket() {
     const tid = document.getElementById('trackInput').value.trim();
     const resBox = document.getElementById('trackResult');
