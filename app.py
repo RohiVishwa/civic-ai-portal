@@ -40,11 +40,11 @@ init_db()
 def classify_grievance(text):
     text_lower = text.lower()
     
-    # Priority
+    # Priority Detection
     priority = "Medium"
-    if any(w in text_lower for w in ["urgent", "danger", "burst", "shock", "fire", "spark", "accident", "overflowing", "deadly", "emergency"]):
+    if any(w in text_lower for w in ["urgent", "danger", "burst", "shock", "fire", "spark", "accident", "overflowing", "deadly", "emergency", "current"]):
         priority = "Critical"
-    elif any(w in text_lower for w in ["pothole", "deep", "block", "no water", "dark", "huge", "broken"]):
+    elif any(w in text_lower for w in ["pothole", "deep", "block", "no water", "dark", "huge", "broken", "gaddha"]):
         priority = "High"
 
     # Department Auto-Triage
@@ -66,7 +66,6 @@ def classify_grievance(text):
 def home():
     return render_template('index.html')
 
-# Support both POST /submit and POST /report so 404 never happens again
 @app.route('/submit', methods=['POST', 'GET'])
 @app.route('/report', methods=['POST', 'GET'])
 def submit_grievance():
@@ -78,6 +77,7 @@ def submit_grievance():
     loc = request.form.get('location', '30.730376, 76.168847')
     img_data = request.form.get('image_data', '')
 
+    # AI Department & Priority Triage
     ai_dept, ai_priority = classify_grievance(desc)
     final_dept = ai_dept if dept == "Auto-Detect via AI Engine" else dept
 
@@ -99,7 +99,21 @@ def submit_grievance():
 
     now = datetime.now()
     created_at = now.strftime("%Y-%m-%d %H:%M")
-    deadline = (now + timedelta(days=7)).strftime("%Y-%m-%d")
+
+    # Priority-based SLA calculation
+    if ai_priority == "Critical":
+        sla_hours = 24
+        sla_label = "24-Hour Emergency SLA"
+        deadline = (now + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M")
+        badge_color = "danger"
+    elif ai_priority == "High":
+        sla_label = "3-Day High Priority SLA"
+        deadline = (now + timedelta(days=3)).strftime("%Y-%m-%d %H:%M")
+        badge_color = "warning text-dark"
+    else:
+        sla_label = "7-Day Standard SLA"
+        deadline = (now + timedelta(days=7)).strftime("%Y-%m-%d %H:%M")
+        badge_color = "info text-dark"
 
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
@@ -112,31 +126,91 @@ def submit_grievance():
 
     return f"""
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Grievance Dispatched | CivicAI</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            body {{ background: #0f172a; color: #fff; font-family: system-ui; padding: 40px 15px; }}
-            .res-card {{ background: #1e293b; border: 1px solid #3b82f6; border-radius: 18px; }}
+            body {{
+                background: linear-gradient(135deg, #0b1120 0%, #0f172a 50%, #1e1b4b 100%);
+                color: #f8fafc;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }}
+            .res-card {{
+                background: #1e293b;
+                border: 1px solid #38bdf8;
+                border-radius: 20px;
+                box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.6);
+                max-width: 520px;
+                width: 100%;
+            }}
+            .ticket-badge {{
+                background: #0f172a;
+                border: 1px solid #334155;
+            }}
         </style>
     </head>
     <body>
-        <div class="container text-center" style="max-width: 520px;">
-            <div class="res-card p-4 shadow-lg text-white">
-                <div class="display-3 text-info mb-2"><i class="bi bi-check-circle-fill"></i></div>
-                <h3 class="fw-bold mb-1">Grievance Dispatched</h3>
-                <p class="text-secondary small mb-3">AI auto-triage has locked coordinates and routed this issue.</p>
-                <div class="p-3 bg-dark rounded-3 mb-4 border border-secondary text-start">
-                    <div class="mb-1"><strong>Ticket ID:</strong> <span class="text-info font-monospace fw-bold">{ticket_id}</span></div>
-                    <div class="mb-1"><strong>Department:</strong> {final_dept}</div>
-                    <div class="mb-1"><strong>Assigned Priority:</strong> <span class="badge bg-warning text-dark">{ai_priority}</span></div>
-                    <div><strong>7-Day SLA Deadline:</strong> {deadline}</div>
+        <div class="res-card p-4 p-md-5 text-center shadow-lg">
+            <div class="d-inline-flex align-items-center justify-content-center bg-info bg-opacity-10 text-info rounded-circle mb-3" style="width: 70px; height: 70px;">
+                <i class="bi bi-check-circle-fill fs-1 text-info"></i>
+            </div>
+            
+            <h3 class="fw-bold text-white mb-1">Grievance Dispatched</h3>
+            <p class="text-secondary small mb-4">AI auto-triage has locked coordinates and routed this issue to the municipal desk.</p>
+
+            <div class="ticket-badge p-3 rounded-3 text-start mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary">
+                    <span class="text-secondary small">Ticket ID:</span>
+                    <div>
+                        <span class="text-info font-monospace fw-bold me-2" id="ticketIdTxt">{ticket_id}</span>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2 text-light" onclick="copyTicket()" title="Copy to clipboard">
+                            <i class="bi bi-clipboard" id="copyIcon"></i>
+                        </button>
+                    </div>
                 </div>
-                <a href="/" class="btn btn-info fw-bold py-2 w-100"><i class="bi bi-arrow-left"></i> Back to Citizen Portal</a>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-secondary small">Department:</span>
+                    <span class="fw-semibold text-light">{final_dept}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-secondary small">Assigned Priority:</span>
+                    <span class="badge bg-{badge_color}">{ai_priority}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-secondary small">{sla_label}:</span>
+                    <span class="font-monospace text-light fw-bold">{deadline}</span>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button onclick="window.print()" class="btn btn-outline-light py-2">
+                    <i class="bi bi-printer"></i> Print Acknowledgement Slip
+                </button>
+                <a href="/" class="btn btn-info fw-bold py-2">
+                    <i class="bi bi-arrow-left"></i> Back to Citizen Portal
+                </a>
             </div>
         </div>
+
+        <script>
+        function copyTicket() {{
+            const tid = document.getElementById('ticketIdTxt').innerText;
+            navigator.clipboard.writeText(tid).then(() => {{
+                const icon = document.getElementById('copyIcon');
+                icon.className = 'bi bi-check2 text-success';
+                setTimeout(() => {{ icon.className = 'bi bi-clipboard'; }}, 2000);
+            }});
+        }}
+        </script>
     </body>
     </html>
     """
