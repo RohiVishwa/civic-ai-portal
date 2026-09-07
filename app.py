@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
 app = Flask(__name__)
-app.secret_key = "civicai_hackathon_secret_key_2026"
+app.secret_key = "civicai_hackathon_super_secret_key_2026"
 
 DB_FILE = "civic_records.db"
 
@@ -34,13 +34,9 @@ def init_db():
 
 init_db()
 
-# Realistic Municipal Action Timeline Engine
 def calculate_action_timeline(desc, selected_dept):
     desc_lower = desc.lower()
-    
-    # Critical Keywords (Emergencies)
     critical_keywords = ['burst', 'leak', 'flood', 'shock', 'spark', 'fire', 'danger', 'hazard', 'deep crater', 'collapse', 'manhole']
-    # High Priority Keywords
     high_keywords = ['overflow', 'blocked', 'pothole', 'garbage heap', 'smell', 'broken pole', 'jam']
 
     priority = "Medium"
@@ -60,7 +56,6 @@ def calculate_action_timeline(desc, selected_dept):
         target_time = (now + timedelta(days=5)).strftime("%d %b, %I:%M %p")
         deadline_text = f"Standard Target: 5–7 Days ({target_time}) [Routine Civil Works]"
 
-    # Department Auto-Detection
     dept = selected_dept
     if selected_dept == "Auto-Detect via AI Engine":
         if any(w in desc_lower for w in ['water', 'pipe', 'leak', 'jal', 'nal', 'drain']):
@@ -82,13 +77,11 @@ def get_fine_tuned_location(raw_loc):
             parts = raw_loc.split(',')
             lat = float(parts[0].strip())
             lng = float(parts[1].strip())
-            # Realistic 10-25m micro-variation
             lat += random.uniform(-0.00015, 0.00015)
             lng += random.uniform(-0.00015, 0.00015)
             return f"{lat:.6f}, {lng:.6f}"
         except Exception:
             pass
-    # Fallback to authentic municipal belt coordinates
     base_lat = 30.730376 + random.uniform(-0.004, 0.004)
     base_lng = 76.168847 + random.uniform(-0.004, 0.004)
     return f"{base_lat:.6f}, {base_lng:.6f}"
@@ -143,16 +136,22 @@ def track_ticket(ticket_id):
         })
     return jsonify({"found": False, "msg": "Ticket record not found. Please verify ID."})
 
+# 100% Fail-safe Login Route
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    error = None
     if request.method == 'POST':
-        user = request.form.get('username')
-        pwd = request.form.get('password')
-        if user == "admin" and pwd == "admin123":
+        user = str(request.form.get('username', '')).strip().lower()
+        pwd = str(request.form.get('password', '')).strip()
+
+        # admin / admin123 dono flexible checks
+        if (user in ["admin", "officer"]) and (pwd in ["admin123", "admin", "1234"]):
             session['logged_in'] = True
             return redirect(url_for('dashboard'))
-        return render_template('login.html', error="Invalid Municipal Officer Credentials")
-    return render_template('login.html')
+        else:
+            error = "Invalid Officer Credentials! Use admin / admin123"
+
+    return render_template('login.html', error=error)
 
 @app.route('/logout')
 def logout():
@@ -213,7 +212,6 @@ def delete_ticket(ticket_id):
     reason = request.form.get('deletion_reason', 'Unspecified Administrative Audit')
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    # Permanent audit log printed on server console
     print(f"[AUDIT LOG] Ticket {ticket_id} Deleted by Officer. Justification: {reason}")
     cur.execute("DELETE FROM complaints WHERE ticket_id = ?", (ticket_id,))
     conn.commit()
@@ -223,3 +221,4 @@ def delete_ticket(ticket_id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+    
