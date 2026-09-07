@@ -13,6 +13,10 @@ DB_NAME = os.path.join(BASE_DIR, "civicai.db")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# ----------------- CONFIGURABLE MASTER CREDENTIALS -----------------
+DEFAULT_OFFICER_ID = "officer"
+DEFAULT_OFFICER_PASS = "admin123"
+
 # ----------------- DATABASE SETUP -----------------
 def init_db():
     conn = sqlite3.connect(DB_NAME)
@@ -44,13 +48,13 @@ def init_db():
             password TEXT
         )
     """)
-    # Default Master Officer Account
-    cur.execute("SELECT * FROM officers WHERE officer_id = 'officer@civic.gov'")
-    if not cur.fetchone():
-        cur.execute("""
-            INSERT INTO officers (name, officer_id, department, password)
-            VALUES ('Chief Nodal Officer', 'officer@civic.gov', 'Town Planning', 'admin123')
-        """)
+    # Ensure Master Officer exists with the updated credentials
+    cur.execute("DELETE FROM officers WHERE officer_id = ?", (DEFAULT_OFFICER_ID,))
+    cur.execute("""
+        INSERT INTO officers (name, officer_id, department, password)
+        VALUES ('Chief Municipal Commissioner', ?, 'Town Planning & Administration', ?)
+    """, (DEFAULT_OFFICER_ID, DEFAULT_OFFICER_PASS))
+    
     conn.commit()
     conn.close()
 
@@ -119,7 +123,7 @@ def submit_grievance():
     now = datetime.now()
     created_at = now.strftime("%Y-%m-%d %H:%M")
 
-    # Priority-based Dynamic SLA
+    # Dynamic SLA by Priority
     if ai_priority == "Critical":
         sla_label = "24-Hour Emergency SLA"
         deadline = (now + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M")
@@ -349,8 +353,7 @@ def admin_panel():
                            officer_name=session.get('officer_name', 'Field Officer'),
                            officer_dept=session.get('officer_dept', 'Administration'))
 
-# ----------------- UNIVERSAL RESOLVE / DENY HANDLERS -----------------
-# Catches both /resolve/<id> and /admin/resolve/<ticket_id> without 404
+# ----------------- UNIVERSAL RESOLVE & DENY HANDLERS -----------------
 @app.route('/admin/resolve/<path:identifier>', methods=['POST'])
 @app.route('/resolve/<path:identifier>', methods=['POST'])
 def resolve_ticket(identifier):
@@ -375,7 +378,6 @@ def resolve_ticket(identifier):
     conn.close()
     return redirect(url_for('admin_panel'))
 
-# Catches both /deny/<id> and /admin/deny/<ticket_id> without 404
 @app.route('/admin/deny/<path:identifier>', methods=['POST'])
 @app.route('/deny/<path:identifier>', methods=['POST'])
 def deny_ticket(identifier):
