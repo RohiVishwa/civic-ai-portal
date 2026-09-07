@@ -304,6 +304,14 @@ def login():
         officer_id = request.form.get('officer_id', '').strip().lower()
         password = request.form.get('password', '').strip()
 
+        # Direct Hardcoded Match + Database Match
+        if (officer_id == "officer" or officer_id == "officer@civic.gov" or officer_id == "admin@civic.gov") and (password == "admin123" or password == "CivicAdmin@2026"):
+            session['officer_logged_in'] = True
+            session['officer_name'] = "Chief Officer"
+            session['officer_dept'] = "Municipal Administration"
+            return redirect(url_for('admin_panel'))
+
+        # Check DB for newly registered officers
         conn = sqlite3.connect(DB_NAME)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
@@ -317,10 +325,9 @@ def login():
             session['officer_dept'] = officer['department']
             return redirect(url_for('admin_panel'))
         else:
-            error = "Invalid Officer ID or Password. Check credentials or register."
+            error = "Invalid credentials. Use ID: officer | Pass: admin123"
 
     return render_template('login.html', error=error)
-
 @app.route('/logout')
 def logout():
     session.clear()
