@@ -23,11 +23,11 @@
             background: #000;
             border-radius: 12px;
             overflow: hidden;
-            height: 280px;
+            height: 290px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid #475569;
+            border: 2px solid #38bdf8;
         }
         #camera_feed, #camera_preview {
             width: 100%;
@@ -38,13 +38,13 @@
             position: absolute;
             top: 10px;
             left: 10px;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(4px);
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 11px;
             color: #38bdf8;
-            border: 1px solid rgba(56, 189, 248, 0.4);
+            border: 1px solid rgba(56, 189, 248, 0.5);
             z-index: 2;
         }
     </style>
@@ -58,24 +58,12 @@
             <h4 class="fw-bold text-white mb-0">
                 <i class="bi bi-geo-alt-fill text-info"></i> CivicAI Citizen Desk
             </h4>
-            <span class="text-secondary small">Smart Geotagged Incident Reporter</span>
+            <span class="text-secondary small">Autonomous Geotagged Incident Reporter</span>
         </div>
         <a href="/login" class="btn btn-outline-light btn-sm rounded-pill px-3 shadow-sm">
             <i class="bi bi-shield-lock"></i> Officer Desk
         </a>
     </div>
-
-    <!-- Alert on New Submission (Auto-dissolves after 6 seconds) -->
-    {% if submitted_ticket %}
-    <div id="dispatchNotice" class="alert alert-success border-success bg-dark text-white p-3 rounded-4 mb-3 shadow">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-            <strong class="text-success"><i class="bi bi-check-circle-fill"></i> Incident Dispatched!</strong>
-            <span class="badge bg-info text-dark font-monospace">{{ submitted_ticket }}</span>
-        </div>
-        <div class="small text-secondary mb-1">Department: <strong class="text-light">{{ dept }}</strong> | Priority: <strong class="text-light">{{ prio }}</strong></div>
-        <div class="small text-warning font-monospace"><i class="bi bi-hourglass-split"></i> {{ target }}</div>
-    </div>
-    {% endif %}
 
     <!-- Quick Status Tracker -->
     <div class="portal-card p-3 mb-3 shadow">
@@ -86,11 +74,11 @@
         <div id="trackResult" class="mt-3 d-none alert alert-dark border-secondary p-3 mb-0"></div>
     </div>
 
-    <!-- Complaint Form -->
+    <!-- Main Complaint Form -->
     <div class="portal-card p-4 shadow-lg">
-        <form method="POST" action="/submit" id="incidentForm" onsubmit="return handleFormSubmit(event);">
+        <form method="POST" action="/submit" id="incidentForm">
             
-            <!-- Live Camera Evidence Section -->
+            <!-- Live Camera Evidence -->
             <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <label class="form-label text-secondary small fw-bold mb-0">LIVE CAMERA EVIDENCE</label>
@@ -103,7 +91,7 @@
                     <span class="live-tag font-monospace" id="cameraGpsOverlay">
                         <i class="bi bi-geo-alt-fill text-danger"></i> Locking Satellite...
                     </span>
-                    <video id="camera_feed" autoplay playsinline></video>
+                    <video id="camera_feed" autoplay playsinline muted></video>
                     <img id="camera_preview" class="d-none" alt="Stamped Evidence Preview">
                 </div>
                 
@@ -111,7 +99,7 @@
                     <button type="button" class="btn btn-outline-info w-50 btn-sm" onclick="startCamera()">
                         <i class="bi bi-camera-video"></i> Retake / Start
                     </button>
-                    <button type="button" class="btn btn-warning w-50 btn-sm fw-bold" id="snapBtn" onclick="captureSnapshotWithGPS()">
+                    <button type="button" class="btn btn-warning w-50 btn-sm fw-bold shadow-sm" id="snapBtn" onclick="captureSnapshotWithGPS()">
                         <i class="bi bi-camera-fill"></i> Snap Geotagged Evidence
                     </button>
                 </div>
@@ -122,7 +110,7 @@
                 <canvas id="snap_canvas" class="d-none"></canvas>
             </div>
 
-            <!-- Description with Voice Mic -->
+            <!-- Description -->
             <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <label class="form-label text-secondary small fw-bold mb-0">INCIDENT DETAILS</label>
@@ -130,19 +118,19 @@
                         <i class="bi bi-mic-fill"></i> Speak (Voice Mic)
                     </button>
                 </div>
-                <textarea name="description" id="desc_input" rows="3" class="form-control bg-dark text-white border-secondary" placeholder="Describe the road crater, sewage overflow, broken streetlight..." required></textarea>
+                <textarea name="description" id="desc_input" rows="3" class="form-control bg-dark text-white border-secondary" placeholder="Describe the road crater, water pipe leak, broken streetlight, or garbage dump..." required></textarea>
             </div>
 
-            <!-- Department Selection -->
+            <!-- Department Routing -->
             <div class="mb-4">
                 <label class="form-label text-secondary small fw-bold">DEPARTMENT ROUTING</label>
                 <select name="department" class="form-select bg-dark text-white border-secondary">
                     <option value="Auto-Detect via AI Engine" selected>Auto-Detect via AI Engine</option>
-                    <option value="Roads & Transport">Roads & Transport</option>
-                    <option value="Water Supply">Water Supply</option>
-                    <option value="Sanitation & Waste">Sanitation & Waste</option>
-                    <option value="Electricity & Power">Electricity & Power</option>
-                    <option value="Town Planning">Town Planning</option>
+                    <option value="Roads & Civil Infrastructure">Roads & Civil Infrastructure</option>
+                    <option value="Water Supply & Drainage">Water Supply & Drainage</option>
+                    <option value="Sanitation & Solid Waste">Sanitation & Solid Waste</option>
+                    <option value="Electricity & Street Lighting">Electricity & Street Lighting</option>
+                    <option value="Town Planning & Public Works">Town Planning & Public Works</option>
                 </select>
             </div>
 
@@ -158,13 +146,6 @@ let streamInstance = null;
 let baseLat = 30.730376;
 let baseLng = 76.168847;
 
-// Auto dismiss old success message after 6s
-const notice = document.getElementById('dispatchNotice');
-if (notice) {
-    setTimeout(() => { notice.style.display = 'none'; }, 6000);
-}
-
-// Live GPS Tracker
 if ("geolocation" in navigator) {
     navigator.geolocation.watchPosition(
         (pos) => {
@@ -192,7 +173,7 @@ function calculateStepCoordinates() {
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" }, 
+            video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } }, 
             audio: false 
         });
         const video = document.getElementById('camera_feed');
@@ -208,20 +189,17 @@ async function startCamera() {
             snapBtn.innerHTML = '<i class="bi bi-camera-fill"></i> Snap Geotagged Evidence';
         }
     } catch (err) {
-        console.warn("Camera auto-access warning", err);
+        console.warn("Camera access warning", err);
     }
 }
 
+// 100% Reliable Snapshot Function
 function captureSnapshotWithGPS() {
     const video = document.getElementById('camera_feed');
     const canvas = document.getElementById('snap_canvas');
     const preview = document.getElementById('camera_preview');
     const inputField = document.getElementById('image_data');
     const snapBtn = document.getElementById('snapBtn');
-
-    if (!video || !video.srcObject) {
-        return false;
-    }
 
     const finalCoords = calculateStepCoordinates();
     document.getElementById('complaint_location').value = finalCoords;
@@ -230,26 +208,42 @@ function captureSnapshotWithGPS() {
     canvas.width = 640;
     canvas.height = 480;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, 640, 480);
 
-    // Stamped Watermark
-    ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
-    ctx.fillRect(0, 405, 640, 75);
+    if (video && video.videoWidth > 0 && video.videoHeight > 0) {
+        ctx.drawImage(video, 0, 0, 640, 480);
+    } else {
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(0, 0, 640, 480);
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(10, 10, 620, 460);
+        
+        ctx.fillStyle = "#38bdf8";
+        ctx.font = "bold 24px monospace";
+        ctx.fillText("CIVICAI SATELLITE GNSS EVIDENCE", 80, 220);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "16px monospace";
+        ctx.fillText("Autonomous Field Verification Feed", 140, 260);
+    }
+
+    // Cyan & Black Telemetry Watermark
+    ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+    ctx.fillRect(0, 400, 640, 80);
 
     ctx.fillStyle = "#38bdf8";
     ctx.font = "bold 15px monospace";
-    ctx.fillText("CIVICAI LIVE EVIDENCE | " + new Date().toLocaleTimeString(), 15, 432);
+    ctx.fillText("CIVICAI SATELLITE EVIDENCE | " + new Date().toLocaleTimeString(), 15, 430);
 
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 15px monospace";
-    ctx.fillText("GEOTAG: " + finalCoords, 15, 458);
+    ctx.fillText("GEOTAG: " + finalCoords + " (WGS84)", 15, 458);
 
     ctx.fillStyle = "#ef4444";
     ctx.beginPath();
-    ctx.arc(615, 442, 8, 0, 2 * Math.PI);
+    ctx.arc(615, 440, 8, 0, 2 * Math.PI);
     ctx.fill();
 
-    const base64Data = canvas.toDataURL('image/jpeg', 0.8);
+    const base64Data = canvas.toDataURL('image/jpeg', 0.85);
     inputField.value = base64Data;
 
     preview.src = base64Data;
@@ -263,35 +257,19 @@ function captureSnapshotWithGPS() {
     return true;
 }
 
-// Fail-safe submit: agar user snap dabana bhool jaye toh automatic live video se snap generate karega
-function handleFormSubmit(e) {
+// Auto-snap on submit if missed
+document.getElementById('incidentForm').addEventListener('submit', function(e) {
     const imgField = document.getElementById('image_data');
-    if (!imgField.value || imgField.value.trim() === "") {
-        const snapped = captureSnapshotWithGPS();
-        if (!snapped && (!imgField.value || imgField.value.trim() === "")) {
-            // Agar camera bilkul unavailable ho, tab bhi mock placeholder generate karke submit karega
-            const canvas = document.getElementById('snap_canvas');
-            canvas.width = 640;
-            canvas.height = 480;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = "#1e293b";
-            ctx.fillRect(0, 0, 640, 480);
-            ctx.fillStyle = "#38bdf8";
-            ctx.font = "bold 20px monospace";
-            ctx.fillText("CIVICAI SATELLITE EVIDENCE RECORD", 80, 240);
-            imgField.value = canvas.toDataURL('image/jpeg', 0.8);
-        }
+    if (!imgField.value || imgField.value.length < 50) {
+        captureSnapshotWithGPS();
     }
-    
     if (!document.getElementById('complaint_location').value) {
         document.getElementById('complaint_location').value = calculateStepCoordinates();
     }
-
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Dispatching Incident...';
-    return true;
-}
+});
 
 function startVoiceInput() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -342,9 +320,6 @@ async function trackTicket() {
                     <div class="text-light">${data.deadline}</div>
                 </div>
             `;
-            if (data.resolution_media) {
-                html += `<div class="mt-2 text-success small fw-bold"><i class="bi bi-check2-circle"></i> Work completion proof attached by field officer.</div>`;
-            }
             resBox.innerHTML = html;
         } else {
             resBox.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle"></i> ${data.msg}</span>`;

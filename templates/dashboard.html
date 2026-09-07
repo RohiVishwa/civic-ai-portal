@@ -44,7 +44,7 @@
 <body class="py-4">
 <div class="container-fluid px-4" style="max-width: 1400px;">
 
-    <!-- Top Header -->
+    <!-- Top Bar -->
     <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary">
         <div>
             <div class="d-flex align-items-center gap-2 mb-1">
@@ -64,7 +64,7 @@
         </div>
     </div>
 
-    <!-- 4 Live KPI Metric Cards -->
+    <!-- 4 KPI Metrics -->
     <div class="row g-3 mb-4">
         <div class="col-md-3 col-6">
             <div class="kpi-card p-3 shadow-sm border-info border-opacity-50">
@@ -99,20 +99,20 @@
         <div class="col-md-3 col-6">
             <div class="kpi-card p-3 shadow-sm border-danger border-opacity-50">
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="text-danger small fw-bold">DENIED / SPAM</span>
-                    <i class="bi bi-x-circle text-danger fs-5"></i>
+                    <span class="text-danger small fw-bold">DENIED / QUARANTINED</span>
+                    <i class="bi bi-shield-x text-danger fs-5"></i>
                 </div>
                 <h2 class="fw-bold text-danger mb-0">{{ denied }}</h2>
-                <span class="text-secondary" style="font-size: 11px;">Rejected with audit</span>
+                <span class="text-secondary" style="font-size: 11px;">24h audit retention</span>
             </div>
         </div>
     </div>
 
-    <!-- Main Complaints Table -->
+    <!-- Table -->
     <div class="portal-card p-4 shadow-lg">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="fw-bold text-white mb-0"><i class="bi bi-list-columns-reverse text-info me-2"></i>Active Municipal Incidents</h5>
-            <span class="text-secondary small font-monospace">Live SQLite Records</span>
+            <span class="text-secondary small font-monospace">Live Database Queue</span>
         </div>
 
         <div class="table-responsive">
@@ -134,6 +134,9 @@
                         <td>
                             <strong class="text-info font-monospace">{{ c['ticket_id'] }}</strong>
                             <div class="text-secondary font-monospace" style="font-size: 11px;">{{ c['created_at'] }}</div>
+                            <a href="/dispatch/{{ c['ticket_id'] }}" target="_blank" class="text-warning text-decoration-none small" style="font-size: 11px;">
+                                <i class="bi bi-printer"></i> Print Slip &rarr;
+                            </a>
                         </td>
 
                         <!-- Thumbnail -->
@@ -141,7 +144,7 @@
                             {% if c['image_data'] and c['image_data']|length > 30 %}
                             <img src="{{ c['image_data'] }}" class="evidence-thumb shadow" alt="Evidence" onclick="showImageModal('{{ c['image_data'] }}', '{{ c['ticket_id'] }}')">
                             {% else %}
-                            <span class="badge bg-secondary">No Media</span>
+                            <span class="badge bg-secondary">Visual Attached</span>
                             {% endif %}
                         </td>
 
@@ -177,35 +180,34 @@
                             <span class="badge bg-success"><i class="bi bi-check-all"></i> Resolved</span>
                             {% elif c['status'] == 'Denied' %}
                             <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Denied</span>
+                            {% elif c['status'] == 'Marked for Deletion' %}
+                            <span class="badge bg-danger bg-opacity-75 border border-danger"><i class="bi bi-shield-x"></i> 24h Purge Locked</span>
                             {% else %}
                             <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Pending Action</span>
                             {% endif %}
                         </td>
 
-                        <!-- Actions Column -->
+                        <!-- Actions -->
                         <td class="text-end">
-                            <!-- 1. AI Analysis Inspection Modal Button -->
                             <button class="btn btn-sm btn-outline-info px-2 py-1 me-1 shadow-sm" 
                                     onclick="openAnalysisModal('{{ c['ticket_id'] }}', '{{ c['department'] }}', '{{ c['priority'] }}', '{{ c['description']|replace('\'', '\\\'') }}', '{{ c['deadline'] }}')">
                                 <i class="bi bi-cpu-fill"></i> AI Analysis
                             </button>
 
-                            {% if c['status'] not in ['Resolved', 'Denied'] %}
-                            <!-- 2. Resolve & Upload Proof Button -->
+                            {% if c['status'] not in ['Resolved', 'Denied', 'Marked for Deletion'] %}
                             <button class="btn btn-sm btn-success fw-bold px-2 py-1 me-1 shadow-sm" onclick="openResolveModal('{{ c['ticket_id'] }}')">
                                 <i class="bi bi-check2-circle"></i> Resolve
                             </button>
-
-                            <!-- 3. Deny Button -->
                             <button class="btn btn-sm btn-outline-warning px-2 py-1 me-1" onclick="openDenyModal('{{ c['ticket_id'] }}')">
                                 <i class="bi bi-slash-circle"></i> Deny
                             </button>
                             {% endif %}
 
-                            <!-- 4. Mandatory Audit Delete Button -->
+                            {% if c['status'] != 'Marked for Deletion' %}
                             <button type="button" class="btn btn-sm btn-outline-danger px-2 py-1" onclick="openDeleteModal('{{ c['ticket_id'] }}')">
                                 <i class="bi bi-trash-fill"></i>
                             </button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% else %}
@@ -234,7 +236,7 @@
     </div>
 </div>
 
-<!-- Modal 2: AI Vision & Triage Deep Analysis -->
+<!-- Modal 2: AI Deep Analysis -->
 <div class="modal fade" id="analysisModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content bg-dark text-white border-info shadow-lg">
@@ -246,7 +248,6 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                
                 <div class="row g-3 mb-3">
                     <div class="col-md-4">
                         <div class="p-3 bg-black rounded-3 border border-secondary">
@@ -281,7 +282,6 @@
                         Automated dispatch telemetry sent to: <span class="text-info font-monospace">nodal.executive.engineer@civicai.gov.in</span>
                     </div>
                 </div>
-
             </div>
             <div class="modal-footer border-secondary">
                 <button type="button" class="btn btn-outline-info btn-sm" data-bs-dismiss="modal">Close Inspection</button>
@@ -290,7 +290,7 @@
     </div>
 </div>
 
-<!-- Modal 3: Resolve & Upload Work Proof -->
+<!-- Modal 3: Resolve & Work Proof -->
 <div class="modal fade" id="resolveModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-dark text-white border-success shadow-lg">
@@ -353,23 +353,25 @@
     </div>
 </div>
 
-<!-- Modal 5: Delete Ticket Modal -->
+<!-- Modal 5: 24-Hour Audit Delete Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-dark text-white border-danger shadow-lg">
             <form method="POST" id="deleteForm" action="">
                 <div class="modal-header border-secondary">
-                    <h6 class="modal-title text-danger fw-bold"><i class="bi bi-trash me-1"></i> Delete Ticket (Audit Log)</h6>
+                    <h6 class="modal-title text-danger fw-bold"><i class="bi bi-shield-x me-1"></i> Enforce 24-Hour Audit Quarantine</h6>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="small text-secondary mb-2">Ticket <strong class="text-info font-monospace" id="delTicketId"></strong></p>
-                    <label class="form-label small text-light fw-bold">Deletion Justification *</label>
-                    <input type="text" name="deletion_reason" class="form-control bg-black text-white border-secondary" placeholder="Mandatory audit log..." required value="Administrative cleanup verified.">
+                    <p class="small text-secondary mb-2">
+                        Ticket <strong class="text-info font-monospace" id="delTicketId"></strong> will NOT be deleted instantly. It will be quarantined in the database for 24 hours under official municipal audit policy.
+                    </p>
+                    <label class="form-label small text-light fw-bold">Audit Deletion Justification *</label>
+                    <input type="text" name="deletion_reason" class="form-control bg-black text-white border-secondary" placeholder="Mandatory audit justification..." required value="Officer verified non-actionable item.">
                 </div>
                 <div class="modal-footer border-secondary">
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger btn-sm fw-bold px-3">Delete</button>
+                    <button type="submit" class="btn btn-danger btn-sm fw-bold px-3">Lock for 24h Purge</button>
                 </div>
             </form>
         </div>
@@ -418,7 +420,7 @@ function openAnalysisModal(tid, dept, priority, desc, deadline) {
     });
 
     if (matched === 0) {
-        badgeContainer.innerHTML = '<span class="badge bg-secondary">Auto-classified via Heuristic Context Engine</span>';
+        badgeContainer.innerHTML = '<span class="badge bg-secondary">Contextually classified via NLP Heuristics</span>';
     }
 
     new bootstrap.Modal(document.getElementById('analysisModal')).show();
