@@ -3,18 +3,21 @@ import uuid
 import base64
 import sqlite3
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 
 app = Flask(__name__)
+app.secret_key = "civicai_officer_secure_session_key_production"
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_NAME = os.path.join(BASE_DIR, "civicai.db")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ----------------- DATABASE INITIALIZATION -----------------
+# ----------------- DATABASE SETUP -----------------
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
+    # Complaints Table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS complaints (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,6 +34,23 @@ def init_db():
             denial_reason TEXT
         )
     """)
+    # Officers Table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS officers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            officer_id TEXT UNIQUE,
+            department TEXT,
+            password TEXT
+        )
+    """)
+    # Default Master Officer Account
+    cur.execute("SELECT * FROM officers WHERE officer_id = 'officer@civic.gov'")
+    if not cur.fetchone():
+        cur.execute("""
+            INSERT INTO officers (name, officer_id, department, password)
+            VALUES ('Chief Nodal Officer', 'officer@civic.gov', 'Town Planning', 'admin123')
+        """)
     conn.commit()
     conn.close()
 
@@ -40,7 +60,7 @@ init_db()
 def classify_grievance(text):
     text_lower = text.lower()
     
-    # Priority Detection
+    # Priority Triage
     priority = "Medium"
     if any(w in text_lower for w in ["urgent", "danger", "burst", "shock", "fire", "spark", "accident", "overflowing", "deadly", "emergency", "current"]):
         priority = "Critical"
@@ -61,7 +81,7 @@ def classify_grievance(text):
 
     return department, priority
 
-# ----------------- ROUTES -----------------
+# ----------------- CITIZEN ROUTES -----------------
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -77,14 +97,13 @@ def submit_grievance():
     loc = request.form.get('location', '30.730376, 76.168847')
     img_data = request.form.get('image_data', '')
 
-    # AI Department & Priority Triage
     ai_dept, ai_priority = classify_grievance(desc)
     final_dept = ai_dept if dept == "Auto-Detect via AI Engine" else dept
 
     ticket_num = str(uuid.uuid4().int)[:5]
     ticket_id = f"GOV-CIVIC-{ticket_num}"
 
-    # Handle image saving (compressed base64 data URL)
+    # Handle image saving (compressed Base64 JPEG)
     saved_filename = ""
     if img_data and "base64," in img_data:
         try:
@@ -95,14 +114,13 @@ def submit_grievance():
             with open(file_path, "wb") as f:
                 f.write(file_bytes)
         except Exception as e:
-            print("Error decoding base64 image:", e)
+            print("Image decode error:", e)
 
     now = datetime.now()
     created_at = now.strftime("%Y-%m-%d %H:%M")
 
-    # Priority-based SLA calculation
+    # Priority-based Dynamic SLA
     if ai_priority == "Critical":
-        sla_hours = 24
         sla_label = "24-Hour Emergency SLA"
         deadline = (now + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M")
         badge_color = "danger"
@@ -246,9 +264,70 @@ def track_ticket(ticket_id):
     except Exception as e:
         return jsonify({"found": False, "msg": str(e)})
 
-# ----------------- ADMIN DASHBOARD -----------------
+# ----------------- OFFICER AUTH & REGISTRATION -----------------
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    error = None
+    success = None
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        officer_id = request.form.get('officer_id', '').strip().lower()
+        department = request.form.get('department', 'Town Planning')
+        password = request.form.get('password', '').strip()
+
+        if not name or not officer_id or not password:
+            error = "Please fill in all required fields."
+        else:
+            try:
+                conn = sqlite3.connect(DB_NAME)
+                cur = conn.cursor()
+                cur.execute("""
+                    INSERT INTO officers (name, officer_id, department, password)
+                    VALUES (?, ?, ?, ?)
+                """, (name, officer_id, department, password))
+                conn.commit()
+                conn.close()
+                success = "Account created successfully! You can now login below."
+            except sqlite3.IntegrityError:
+                error = "This Officer ID already exists. Please choose another or login."
+
+    return render_template('register.html', error=error, success=success)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        officer_id = request.form.get('officer_id', '').strip().lower()
+        password = request.form.get('password', '').strip()
+
+        conn = sqlite3.connect(DB_NAME)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM officers WHERE LOWER(officer_id) = ? AND password = ?", (officer_id, password))
+        officer = cur.fetchone()
+        conn.close()
+
+        if officer:
+            session['officer_logged_in'] = True
+            session['officer_name'] = officer['name']
+            session['officer_dept'] = officer['department']
+            return redirect(url_for('admin_panel'))
+        else:
+            error = "Invalid Officer ID or Password. Check credentials or register."
+
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+# ----------------- OFFICER ADMIN PANEL -----------------
 @app.route('/admin')
 def admin_panel():
+    if not session.get('officer_logged_in'):
+        return redirect(url_for('login'))
+
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
@@ -261,29 +340,56 @@ def admin_panel():
     denied = sum(1 for c in complaints if c["status"] == "Denied")
     conn.close()
 
-    return render_template('admin.html', complaints=complaints, total=total, pending=pending, resolved=resolved, denied=denied)
+    return render_template('admin.html', 
+                           complaints=complaints, 
+                           total=total, 
+                           pending=pending, 
+                           resolved=resolved, 
+                           denied=denied,
+                           officer_name=session.get('officer_name', 'Field Officer'),
+                           officer_dept=session.get('officer_dept', 'Administration'))
 
-@app.route('/admin/resolve/<int:cid>', methods=['POST'])
-def resolve_ticket(cid):
+# ----------------- UNIVERSAL RESOLVE / DENY HANDLERS -----------------
+# Catches both /resolve/<id> and /admin/resolve/<ticket_id> without 404
+@app.route('/admin/resolve/<path:identifier>', methods=['POST'])
+@app.route('/resolve/<path:identifier>', methods=['POST'])
+def resolve_ticket(identifier):
+    if not session.get('officer_logged_in'):
+        return redirect(url_for('login'))
+
     file = request.files.get('resolution_photo')
     filename = ""
     if file and file.filename != "":
-        filename = f"resolved_{cid}_{uuid.uuid4().hex[:6]}.jpg"
+        clean_name = str(identifier).replace('/', '_')
+        filename = f"resolved_{clean_name}_{uuid.uuid4().hex[:6]}.jpg"
         file.save(os.path.join(UPLOAD_FOLDER, filename))
 
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    cur.execute("UPDATE complaints SET status = 'Resolved', resolution_media = ? WHERE id = ?", (filename, cid))
+    cur.execute("""
+        UPDATE complaints 
+        SET status = 'Resolved', resolution_media = ? 
+        WHERE id = ? OR ticket_id = ?
+    """, (filename, identifier, identifier))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
 
-@app.route('/admin/deny/<int:cid>', methods=['POST'])
-def deny_ticket(cid):
+# Catches both /deny/<id> and /admin/deny/<ticket_id> without 404
+@app.route('/admin/deny/<path:identifier>', methods=['POST'])
+@app.route('/deny/<path:identifier>', methods=['POST'])
+def deny_ticket(identifier):
+    if not session.get('officer_logged_in'):
+        return redirect(url_for('login'))
+
     reason = request.form.get('denial_reason', 'Spam / Out of Jurisdiction')
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    cur.execute("UPDATE complaints SET status = 'Denied', denial_reason = ? WHERE id = ?", (reason, cid))
+    cur.execute("""
+        UPDATE complaints 
+        SET status = 'Denied', denial_reason = ? 
+        WHERE id = ? OR ticket_id = ?
+    """, (reason, identifier, identifier))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
