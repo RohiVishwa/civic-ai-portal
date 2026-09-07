@@ -23,7 +23,7 @@
             background: #000;
             border-radius: 12px;
             overflow: hidden;
-            height: 270px;
+            height: 280px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -52,7 +52,7 @@
 <body class="py-4">
 <div class="container" style="max-width: 600px;">
     
-    <!-- Header -->
+    <!-- Top Header -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h4 class="fw-bold text-white mb-0">
@@ -65,7 +65,7 @@
         </a>
     </div>
 
-    <!-- Status Tracker -->
+    <!-- Quick Status Tracker -->
     <div class="portal-card p-3 mb-3 shadow">
         <div class="input-group">
             <input type="text" id="trackInput" class="form-control bg-dark text-white border-secondary" placeholder="Track ticket (e.g. GOV-CIVIC-12345)">
@@ -78,10 +78,10 @@
     <div class="portal-card p-4 shadow-lg">
         <form method="POST" action="/submit">
             
-            <!-- Live Camera Section -->
+            <!-- Live Camera Section Only (File Upload Removed) -->
             <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <label class="form-label text-secondary small fw-bold mb-0">LIVE INCIDENT EVIDENCE</label>
+                    <label class="form-label text-secondary small fw-bold mb-0">LIVE CAMERA EVIDENCE</label>
                     <span class="badge bg-success bg-opacity-25 text-success small" id="gpsBadge">
                         <i class="bi bi-broadcast-pin"></i> GPS Synchronized
                     </span>
@@ -97,16 +97,11 @@
                 
                 <div class="d-flex gap-2">
                     <button type="button" class="btn btn-outline-info w-50 btn-sm" onclick="startCamera()">
-                        <i class="bi bi-camera-video"></i> Start Camera
+                        <i class="bi bi-camera-video"></i> Retake / Start
                     </button>
                     <button type="button" class="btn btn-warning w-50 btn-sm fw-bold" id="snapBtn" onclick="captureSnapshotWithGPS()">
                         <i class="bi bi-camera-fill"></i> Snap Geotagged Evidence
                     </button>
-                </div>
-                
-                <div class="mt-2 text-center">
-                    <span class="text-secondary small">Or choose file from device: </span>
-                    <input type="file" id="file_picker" accept="image/*" class="form-control form-control-sm bg-dark text-white border-secondary d-inline-block mt-1" onchange="handleFileWithGPS(this)">
                 </div>
 
                 <!-- Hidden inputs -->
@@ -149,7 +144,6 @@
 <script>
 let streamInstance = null;
 
-// Dynamic location helper to ensure variation per submission
 function generateDynamicCoords(baseLat = 30.7303, baseLng = 76.1688) {
     const latOffset = (Math.random() - 0.5) * 0.0180;
     const lngOffset = (Math.random() - 0.5) * 0.0180;
@@ -189,8 +183,14 @@ async function startCamera() {
         video.classList.remove('d-none');
         preview.classList.add('d-none');
         streamInstance = stream;
+        
+        const snapBtn = document.getElementById('snapBtn');
+        if (snapBtn) {
+            snapBtn.className = "btn btn-warning w-50 btn-sm fw-bold";
+            snapBtn.innerHTML = '<i class="bi bi-camera-fill"></i> Snap Geotagged Evidence';
+        }
     } catch (err) {
-        console.warn("Camera start failed, fallback to file picker:", err);
+        alert("Camera permission access nahi mil paya. Kripya camera allow karein.");
     }
 }
 
@@ -203,7 +203,7 @@ function captureSnapshotWithGPS() {
     const snapBtn = document.getElementById('snapBtn');
 
     if (!video || !video.srcObject) {
-        alert("Pehle 'Start Camera' dabayein ya gallery se file choose karein!");
+        alert("Pehle 'Retake / Start' dabakar camera chalayein!");
         return;
     }
 
@@ -220,7 +220,7 @@ function captureSnapshotWithGPS() {
 
     ctx.fillStyle = "#38bdf8";
     ctx.font = "bold 15px monospace";
-    ctx.fillText("CIVICAI INCIDENT DISPATCH | " + new Date().toLocaleTimeString(), 15, 432);
+    ctx.fillText("CIVICAI LIVE SNAPSHOT | " + new Date().toLocaleTimeString(), 15, 432);
 
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 15px monospace";
@@ -241,42 +241,6 @@ function captureSnapshotWithGPS() {
     if (snapBtn) {
         snapBtn.className = "btn btn-success w-50 btn-sm fw-bold";
         snapBtn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Geotag Stamped!';
-    }
-}
-
-// Handle File with GPS Watermark
-function handleFileWithGPS(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = new Image();
-            img.onload = function() {
-                document.getElementById('complaint_location').value = currentCoords;
-                const canvas = document.getElementById('snap_canvas');
-                canvas.width = 640;
-                canvas.height = 480;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, 640, 480);
-
-                ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-                ctx.fillRect(0, 405, 640, 75);
-                ctx.fillStyle = "#38bdf8";
-                ctx.font = "bold 15px monospace";
-                ctx.fillText("CIVICAI UPLOADED EVIDENCE | " + new Date().toLocaleTimeString(), 15, 432);
-                ctx.fillStyle = "#ffffff";
-                ctx.font = "bold 15px monospace";
-                ctx.fillText("GEOTAG: " + currentCoords, 15, 458);
-
-                const stamped = canvas.toDataURL('image/jpeg', 0.8);
-                document.getElementById('image_data').value = stamped;
-                const preview = document.getElementById('camera_preview');
-                preview.src = stamped;
-                preview.classList.remove('d-none');
-                document.getElementById('camera_feed').classList.add('d-none');
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(input.files[0]);
     }
 }
 
