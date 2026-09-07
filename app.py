@@ -1,375 +1,225 @@
 import os
-import uuid
-import base64
-import random
 import sqlite3
+import random
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
 app = Flask(__name__)
-app.secret_key = "civicai_officer_master_secure_production_key"
+app.secret_key = "civicai_hackathon_secret_key_2026"
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_NAME = os.path.join(BASE_DIR, "civicai.db")
+DB_FILE = "civic_records.db"
 
-# ----------------- DATABASE SETUP & PERSISTENCE -----------------
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    
-    # Complaints Table
-    cur.execute("""
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS complaints (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ticket_id TEXT UNIQUE,
             description TEXT,
             department TEXT,
             priority TEXT,
-            status TEXT DEFAULT 'Pending',
-            created_at TEXT,
-            deadline TEXT,
             location TEXT,
-            damage_media TEXT,
+            deadline TEXT,
+            status TEXT DEFAULT 'Pending Review',
+            image_data TEXT,
             resolution_media TEXT,
-            denial_reason TEXT
+            resolution_notes TEXT,
+            deletion_reason TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """)
-    
-    # Officers Table
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS officers (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            officer_id TEXT UNIQUE,
-            department TEXT,
-            password TEXT
-        )
-    """)
-
-    # Seed Default Officer
-    cur.execute("SELECT * FROM officers WHERE officer_id = 'officer'")
-    if not cur.fetchone():
-        cur.execute("""
-            INSERT INTO officers (name, officer_id, department, password)
-            VALUES ('Chief Municipal Commissioner', 'officer', 'Municipal Administration', 'admin123')
-        """)
-
-    # Demo Seed Complaints (Unique coordinates for each spot)
-    cur.execute("SELECT COUNT(*) FROM complaints")
-    count = cur.fetchone()[0]
-    if count == 0:
-        now = datetime.now()
-        pipe_svg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%230284c7'/><circle cx='50' cy='50' r='20' fill='%2338bdf8'/><text x='50' y='85' fill='white' font-size='11' text-anchor='middle' font-family='sans-serif'>Water Pipe</text></svg>"
-        pothole_svg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23334155'/><ellipse cx='50' cy='50' rx='35' ry='18' fill='%230f172a'/><text x='50' y='85' fill='white' font-size='11' text-anchor='middle' font-family='sans-serif'>Road Crater</text></svg>"
-        waste_svg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23059669'/><rect x='30' y='30' width='40' height='40' rx='4' fill='%2310b981'/><text x='50' y='85' fill='white' font-size='11' text-anchor='middle' font-family='sans-serif'>Garbage</text></svg>"
-
-        sample_tickets = [
-            ("GOV-CIVIC-89102", "Severe pipeline burst near main market chowk.", "Water Supply", "Critical", "Pending", (now - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M"), (now + timedelta(hours=22)).strftime("%Y-%m-%d %H:%M"), "30.741200, 76.155400", pipe_svg),
-            ("GOV-CIVIC-44219", "Deep crater pothole in sector link road causing accidents at night.", "Roads & Transport", "High", "Pending", (now - timedelta(hours=8)).strftime("%Y-%m-%d %H:%M"), (now + timedelta(days=2)).strftime("%Y-%m-%d %H:%M"), "30.718900, 76.182100", pothole_svg),
-            ("GOV-CIVIC-31045", "Street garbage container overflowing with foul smell near school.", "Sanitation & Waste", "Medium", "Pending", (now - timedelta(days=1)).strftime("%Y-%m-%d %H:%M"), (now + timedelta(days=6)).strftime("%Y-%m-%d %H:%M"), "30.752300, 76.140800", waste_svg)
-        ]
-        cur.executemany("""
-            INSERT INTO complaints (ticket_id, description, department, priority, status, created_at, deadline, location, damage_media)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, sample_tickets)
-
+    ''')
     conn.commit()
     conn.close()
 
 init_db()
 
-# ----------------- DYNAMIC UNIQUE LOCATION ENGINE -----------------
-def get_unique_location(received_loc):
-    if received_loc and len(received_loc.split(',')) == 2:
-        try:
-            lat, lng = map(float, received_loc.split(','))
-            return f"{lat:.6f}, {lng:.6f}"
-        except:
-            pass
-    # Urban municipal sector cluster spots
-    base_spots = [
-        (30.730376, 76.168847),
-        (30.741200, 76.155400),
-        (30.718900, 76.182100),
-        (30.752300, 76.140800),
-        (30.724500, 76.195600)
-    ]
-    lat, lng = random.choice(base_spots)
-    lat += random.uniform(-0.004, 0.004)
-    lng += random.uniform(-0.004, 0.004)
-    return f"{lat:.6f}, {lng:.6f}"
+# Realistic Municipal Action Timeline Engine
+def calculate_action_timeline(desc, selected_dept):
+    desc_lower = desc.lower()
+    
+    # Critical Keywords (Emergencies)
+    critical_keywords = ['burst', 'leak', 'flood', 'shock', 'spark', 'fire', 'danger', 'hazard', 'deep crater', 'collapse', 'manhole']
+    # High Priority Keywords
+    high_keywords = ['overflow', 'blocked', 'pothole', 'garbage heap', 'smell', 'broken pole', 'jam']
 
-# ----------------- AI CLASSIFIER -----------------
-def classify_grievance(text):
-    text_lower = text.lower()
     priority = "Medium"
-    if any(w in text_lower for w in ["urgent", "danger", "burst", "shock", "fire", "spark", "accident", "overflowing", "deadly", "emergency", "current"]):
+    if any(k in desc_lower for k in critical_keywords):
         priority = "Critical"
-    elif any(w in text_lower for w in ["pothole", "deep", "block", "no water", "dark", "huge", "broken", "gaddha"]):
+    elif any(k in desc_lower for k in high_keywords):
         priority = "High"
 
-    if any(w in text_lower for w in ["water", "pipe", "pipeline", "leak", "sewer", "drain", "tank", "paani", "nali"]):
-        department = "Water Supply"
-    elif any(w in text_lower for w in ["road", "pothole", "street", "traffic", "divider", "footpath", "highway", "gaddha", "sadak"]):
-        department = "Roads & Transport"
-    elif any(w in text_lower for w in ["garbage", "trash", "waste", "smell", "dustbin", "clean", "dump", "kachra", "safai"]):
-        department = "Sanitation & Waste"
-    elif any(w in text_lower for w in ["light", "wire", "pole", "electric", "power", "transformer", "blackout", "bijli", "taar"]):
-        department = "Electricity & Power"
+    now = datetime.now()
+    if priority == "Critical":
+        target_time = (now + timedelta(hours=24)).strftime("%d %b, %I:%M %p")
+        deadline_text = f"First Action Target: 24h ({target_time}) [Containment & Safety Lock]"
+    elif priority == "High":
+        target_time = (now + timedelta(days=2)).strftime("%d %b, %I:%M %p")
+        deadline_text = f"First Action Target: 48h ({target_time}) [Site Assessment & Crew Dispatch]"
     else:
-        department = "Town Planning"
+        target_time = (now + timedelta(days=5)).strftime("%d %b, %I:%M %p")
+        deadline_text = f"Standard Target: 5–7 Days ({target_time}) [Routine Civil Works]"
 
-    return department, priority
+    # Department Auto-Detection
+    dept = selected_dept
+    if selected_dept == "Auto-Detect via AI Engine":
+        if any(w in desc_lower for w in ['water', 'pipe', 'leak', 'jal', 'nal', 'drain']):
+            dept = "Water Supply & Drainage"
+        elif any(w in desc_lower for w in ['road', 'pothole', 'sadak', 'crater', 'traffic', 'divider']):
+            dept = "Roads & Civil Infrastructure"
+        elif any(w in desc_lower for w in ['garbage', 'trash', 'kachra', 'smell', 'sewage', 'safai', 'waste']):
+            dept = "Sanitation & Solid Waste"
+        elif any(w in desc_lower for w in ['light', 'wire', 'pole', 'current', 'bijli', 'power', 'dark']):
+            dept = "Electricity & Street Lighting"
+        else:
+            dept = "Town Planning & Public Works"
 
-# ----------------- CITIZEN ROUTES -----------------
+    return dept, priority, deadline_text
+
+def get_fine_tuned_location(raw_loc):
+    if raw_loc and ',' in raw_loc:
+        try:
+            parts = raw_loc.split(',')
+            lat = float(parts[0].strip())
+            lng = float(parts[1].strip())
+            # Realistic 10-25m micro-variation
+            lat += random.uniform(-0.00015, 0.00015)
+            lng += random.uniform(-0.00015, 0.00015)
+            return f"{lat:.6f}, {lng:.6f}"
+        except Exception:
+            pass
+    # Fallback to authentic municipal belt coordinates
+    base_lat = 30.730376 + random.uniform(-0.004, 0.004)
+    base_lng = 76.168847 + random.uniform(-0.004, 0.004)
+    return f"{base_lat:.6f}, {base_lng:.6f}"
+
 @app.route('/')
 def home():
     return render_template('index.html')
 
-@app.route('/submit', methods=['POST', 'GET'])
-@app.route('/report', methods=['POST', 'GET'])
-def submit_grievance():
-    if request.method == 'GET':
-        return redirect(url_for('home'))
-
+@app.route('/submit', methods=['POST'])
+def submit_complaint():
     desc = request.form.get('description', '').strip()
-    dept = request.form.get('department', 'Auto-Detect via AI Engine')
-    raw_loc = request.form.get('location', '').strip()
-    loc = get_unique_location(raw_loc)
-    img_data = request.form.get('image_data', '').strip()
+    selected_dept = request.form.get('department', 'Auto-Detect via AI Engine')
+    raw_location = request.form.get('location', '')
+    image_data = request.form.get('image_data', '')
 
-    ai_dept, ai_priority = classify_grievance(desc)
-    final_dept = ai_dept if dept == "Auto-Detect via AI Engine" else dept
+    final_location = get_fine_tuned_location(raw_location)
+    department, priority, deadline_text = calculate_action_timeline(desc, selected_dept)
+    ticket_id = f"GOV-CIVIC-{random.randint(10000, 99999)}"
 
-    ticket_num = str(uuid.uuid4().int)[:5]
-    ticket_id = f"GOV-CIVIC-{ticket_num}"
-
-    now = datetime.now()
-    created_at = now.strftime("%Y-%m-%d %H:%M")
-
-    if ai_priority == "Critical":
-        sla_label = "24-Hour Emergency SLA"
-        deadline = (now + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M")
-        badge_color = "danger"
-    elif ai_priority == "High":
-        sla_label = "3-Day High Priority SLA"
-        deadline = (now + timedelta(days=3)).strftime("%Y-%m-%d %H:%M")
-        badge_color = "warning text-dark"
-    else:
-        sla_label = "7-Day Standard SLA"
-        deadline = (now + timedelta(days=7)).strftime("%Y-%m-%d %H:%M")
-        badge_color = "info text-dark"
-
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    cur.execute("""
-        INSERT INTO complaints (ticket_id, description, department, priority, status, created_at, deadline, location, damage_media)
-        VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?)
-    """, (ticket_id, desc, final_dept, ai_priority, created_at, deadline, loc, img_data))
+    cur.execute('''
+        INSERT INTO complaints (ticket_id, description, department, priority, location, deadline, status, image_data)
+        VALUES (?, ?, ?, ?, ?, ?, 'Pending Review', ?)
+    ''', (ticket_id, desc, department, priority, final_location, deadline_text, image_data))
     conn.commit()
     conn.close()
 
-    return f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Grievance Dispatched | CivicAI</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-        <style>
-            body {{ background: #0b1120; color: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; font-family: sans-serif; }}
-            .card-box {{ background: #1e293b; border: 1px solid #38bdf8; border-radius: 18px; max-width: 480px; width: 100%; }}
-        </style>
-    </head>
-    <body>
-        <div class="card-box p-4 text-center shadow-lg">
-            <div class="d-inline-flex p-3 rounded-circle bg-info bg-opacity-10 text-info mb-3">
-                <i class="bi bi-check-circle-fill fs-1 text-info"></i>
-            </div>
-            <h4 class="fw-bold text-white mb-1">Grievance Dispatched</h4>
-            <p class="text-secondary small mb-3">Incident successfully locked and routed to municipal desk.</p>
-            
-            <div class="bg-dark p-3 rounded-3 text-start mb-3 border border-secondary">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-secondary small">Ticket ID:</span>
-                    <div>
-                        <span class="text-info font-monospace fw-bold me-2">{ticket_id}</span>
-                        <button class="btn btn-sm btn-outline-secondary py-0 px-2 text-white" onclick="navigator.clipboard.writeText('{ticket_id}'); alert('Ticket ID Copied!');"><i class="bi bi-clipboard"></i></button>
-                    </div>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-secondary small">Department:</span>
-                    <span class="text-light fw-semibold">{final_dept}</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-secondary small">Priority:</span>
-                    <span class="badge bg-{badge_color}">{ai_priority}</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-secondary small">GPS Location:</span>
-                    <span class="font-monospace text-info small">{loc}</span>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span class="text-secondary small">{sla_label}:</span>
-                    <span class="font-monospace text-light fw-bold">{deadline}</span>
-                </div>
-            </div>
+    return render_template('index.html', submitted_ticket=ticket_id, dept=department, prio=priority, target=deadline_text)
 
-            <div class="d-grid gap-2">
-                <button onclick="window.print()" class="btn btn-outline-light"><i class="bi bi-printer"></i> Print Slip</button>
-                <a href="/" class="btn btn-info fw-bold"><i class="bi bi-arrow-left"></i> Return Home</a>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-# ----------------- TRACK TICKET API -----------------
-@app.route('/api/track/<ticket_id>', methods=['GET'])
+@app.route('/api/track/<ticket_id>')
 def track_ticket(ticket_id):
-    try:
-        conn = sqlite3.connect(DB_NAME)
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT ticket_id, department, priority, status, created_at, deadline, damage_media, resolution_media, denial_reason, location 
-            FROM complaints WHERE ticket_id = ?
-        """, (ticket_id.strip(),))
-        row = cur.fetchone()
-        conn.close()
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT ticket_id, department, priority, deadline, status, resolution_media, created_at
+        FROM complaints WHERE ticket_id = ?
+    ''', (ticket_id,))
+    row = cur.fetchone()
+    conn.close()
 
-        if row:
-            return jsonify({
-                "found": True,
-                "ticket_id": row["ticket_id"],
-                "department": row["department"],
-                "priority": row["priority"],
-                "status": row["status"],
-                "created_at": row["created_at"],
-                "deadline": row["deadline"],
-                "damage_media": row["damage_media"],
-                "resolution_media": row["resolution_media"],
-                "denial_reason": row["denial_reason"],
-                "location": row["location"]
-            })
-        return jsonify({"found": False, "msg": "No ticket found with this ID."})
-    except Exception as e:
-        return jsonify({"found": False, "msg": str(e)})
+    if row:
+        return jsonify({
+            "found": True,
+            "ticket_id": row[0],
+            "department": row[1],
+            "priority": row[2],
+            "deadline": row[3],
+            "status": row[4],
+            "resolution_media": bool(row[5]),
+            "created_at": row[6]
+        })
+    return jsonify({"found": False, "msg": "Ticket record not found. Please verify ID."})
 
-# ----------------- OFFICER AUTH -----------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    error = None
     if request.method == 'POST':
-        uid = (request.form.get('officer_id') or request.form.get('username') or '').strip().lower()
-        pwd = (request.form.get('password') or '').strip()
-
-        if (uid in ["officer", "officer@civic.gov", "admin"]) and (pwd in ["admin123", "civicadmin@2026"]):
-            session['officer_logged_in'] = True
-            session['officer_name'] = "Chief Officer"
-            session['officer_dept'] = "Municipal Administration"
-            return redirect(url_for('admin_panel'))
-        else:
-            error = "Invalid credentials. Use ID: officer | Pass: admin123"
-
-    return render_template('login.html', error=error)
+        user = request.form.get('username')
+        pwd = request.form.get('password')
+        if user == "admin" and pwd == "admin123":
+            session['logged_in'] = True
+            return redirect(url_for('dashboard'))
+        return render_template('login.html', error="Invalid Municipal Officer Credentials")
+    return render_template('login.html')
 
 @app.route('/logout')
 def logout():
-    session.clear()
-    return redirect(url_for('login'))
+    session.pop('logged_in', None)
+    return redirect(url_for('home'))
 
-# ----------------- OFFICER ADMIN PANEL -----------------
-@app.route('/admin')
-def admin_panel():
-    if not session.get('officer_logged_in'):
+@app.route('/dashboard')
+def dashboard():
+    if not session.get('logged_in'):
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute("SELECT * FROM complaints ORDER BY id DESC")
     complaints = cur.fetchall()
 
     total = len(complaints)
-    pending = sum(1 for c in complaints if c["status"] == "Pending")
-    resolved = sum(1 for c in complaints if c["status"] == "Resolved")
-    denied = sum(1 for c in complaints if c["status"] == "Denied")
+    pending = sum(1 for c in complaints if c['status'] == 'Pending Review')
+    resolved = sum(1 for c in complaints if c['status'] == 'Resolved')
+    denied = sum(1 for c in complaints if c['status'] == 'Denied')
     conn.close()
 
-    return render_template('admin.html', 
-                           complaints=complaints, 
-                           total=total, 
-                           pending=pending, 
-                           resolved=resolved, 
-                           denied=denied,
-                           officer_name=session.get('officer_name', 'Chief Officer'),
-                           officer_dept=session.get('officer_dept', 'Municipal Administration'))
+    return render_template('dashboard.html', complaints=complaints, total=total, pending=pending, resolved=resolved, denied=denied)
 
-# ----------------- RESOLVE & DENY -----------------
-@app.route('/admin/resolve/<path:identifier>', methods=['POST'])
-@app.route('/resolve/<path:identifier>', methods=['POST'])
-def resolve_ticket(identifier):
-    if not session.get('officer_logged_in'):
+@app.route('/resolve/<ticket_id>', methods=['GET', 'POST'])
+def resolve_ticket(ticket_id):
+    if not session.get('logged_in'):
         return redirect(url_for('login'))
 
-    file = request.files.get('resolution_photo')
-    base64_proof = ""
-    if file and file.filename != "":
-        encoded = base64.b64encode(file.read()).decode('utf-8')
-        base64_proof = f"data:image/jpeg;base64,{encoded}"
-
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
-    cur.execute("""
-        UPDATE complaints 
-        SET status = 'Resolved', resolution_media = ? 
-        WHERE id = ? OR ticket_id = ?
-    """, (base64_proof, identifier, identifier))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('admin_panel'))
 
-@app.route('/admin/deny/<path:identifier>', methods=['POST'])
-@app.route('/deny/<path:identifier>', methods=['POST'])
-def deny_ticket(identifier):
-    if not session.get('officer_logged_in'):
+    if request.method == 'POST':
+        resolution_notes = request.form.get('resolution_notes', '')
+        resolution_media = request.form.get('resolution_media', '')
+
+        cur.execute('''
+            UPDATE complaints
+            SET status = 'Resolved', resolution_notes = ?, resolution_media = ?
+            WHERE ticket_id = ?
+        ''', (resolution_notes, resolution_media, ticket_id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('dashboard'))
+
+    cur.execute("SELECT * FROM complaints WHERE ticket_id = ?", (ticket_id,))
+    complaint = cur.fetchone()
+    conn.close()
+    return render_template('resolve.html', complaint=complaint)
+
+@app.route('/delete/<ticket_id>', methods=['POST'])
+def delete_ticket(ticket_id):
+    if not session.get('logged_in'):
         return redirect(url_for('login'))
 
-    reason = request.form.get('denial_reason', 'Out of Jurisdiction')
-    conn = sqlite3.connect(DB_NAME)
+    reason = request.form.get('deletion_reason', 'Unspecified Administrative Audit')
+    conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    cur.execute("""
-        UPDATE complaints 
-        SET status = 'Denied', denial_reason = ? 
-        WHERE id = ? OR ticket_id = ?
-    """, (reason, identifier, identifier))
+    # Permanent audit log printed on server console
+    print(f"[AUDIT LOG] Ticket {ticket_id} Deleted by Officer. Justification: {reason}")
+    cur.execute("DELETE FROM complaints WHERE ticket_id = ?", (ticket_id,))
     conn.commit()
     conn.close()
-    return redirect(url_for('admin_panel'))
-
-# ----------------- MANDATORY AUDITED DELETE -----------------
-@app.route('/admin/delete/<path:identifier>', methods=['POST'])
-@app.route('/delete/<path:identifier>', methods=['POST'])
-def delete_ticket(identifier):
-    if not session.get('officer_logged_in'):
-        return redirect(url_for('login'))
-
-    reason = request.form.get('delete_reason', '').strip()
-    if not reason:
-        reason = "Deleted without reason"
-
-    print(f"[AUDIT LOG] Officer {session.get('officer_name')} deleted ticket {identifier} | Justification: {reason}")
-
-    conn = sqlite3.connect(DB_NAME)
-    cur = conn.cursor()
-    cur.execute("DELETE FROM complaints WHERE id = ? OR ticket_id = ?", (identifier, identifier))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('admin_panel'))
+    return redirect(url_for('dashboard'))
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5001))
+    port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)

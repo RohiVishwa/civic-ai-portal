@@ -65,6 +65,18 @@
         </a>
     </div>
 
+    <!-- Alert on New Submission -->
+    {% if submitted_ticket %}
+    <div class="alert alert-success border-success bg-dark text-white p-3 rounded-4 mb-3 shadow">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <strong class="text-success"><i class="bi bi-check-circle-fill"></i> Incident Dispatched!</strong>
+            <span class="badge bg-info text-dark font-monospace">{{ submitted_ticket }}</span>
+        </div>
+        <div class="small text-secondary mb-1">Department: <strong class="text-light">{{ dept }}</strong> | Priority: <strong class="text-light">{{ prio }}</strong></div>
+        <div class="small text-warning font-monospace"><i class="bi bi-hourglass-split"></i> {{ target }}</div>
+    </div>
+    {% endif %}
+
     <!-- Quick Status Tracker -->
     <div class="portal-card p-3 mb-3 shadow">
         <div class="input-group">
@@ -78,7 +90,7 @@
     <div class="portal-card p-4 shadow-lg">
         <form method="POST" action="/submit">
             
-            <!-- Live Camera Section Only -->
+            <!-- Live Camera Evidence Section -->
             <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <label class="form-label text-secondary small fw-bold mb-0">LIVE CAMERA EVIDENCE</label>
@@ -104,13 +116,13 @@
                     </button>
                 </div>
 
-                <!-- Hidden inputs -->
+                <!-- Hidden inputs for Form -->
                 <input type="hidden" name="image_data" id="image_data">
                 <input type="hidden" name="location" id="complaint_location">
                 <canvas id="snap_canvas" class="d-none"></canvas>
             </div>
 
-            <!-- Description with Voice Mic -->
+            <!-- Description with Vernacular Voice Mic -->
             <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <label class="form-label text-secondary small fw-bold mb-0">INCIDENT DETAILS</label>
@@ -145,17 +157,13 @@
 let streamInstance = null;
 let baseLat = 30.730376;
 let baseLng = 76.168847;
-let hasRealGPS = false;
 
-// 1. Live Hardware GPS Watcher (High Accuracy enabled)
+// Live Geolocation Watcher
 if ("geolocation" in navigator) {
     navigator.geolocation.watchPosition(
         (pos) => {
             baseLat = pos.coords.latitude;
             baseLng = pos.coords.longitude;
-            hasRealGPS = true;
-            
-            // Format to 6 decimal places (approx 11cm accuracy)
             const liveCoordStr = `${baseLat.toFixed(6)}, ${baseLng.toFixed(6)}`;
             document.getElementById('complaint_location').value = liveCoordStr;
             document.getElementById('cameraGpsOverlay').innerHTML = `<i class="bi bi-geo-alt-fill text-danger"></i> GPS: ${liveCoordStr}`;
@@ -164,23 +172,16 @@ if ("geolocation" in navigator) {
             badge.className = "badge bg-success bg-opacity-25 text-success small";
             badge.innerHTML = `<i class="bi bi-check-circle-fill"></i> Satellite Locked`;
         },
-        (err) => {
-            console.warn("GPS Fallback active");
-        },
+        (err) => { console.warn("GPS Fallback active"); },
         { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
     );
 }
 
-// 2. Dynamic Real-Distance Step Generator
-// 0.0001 to 0.0002 deg offset = exactly 10 to 25 meters change (as if user walked a few paces)
+// Generates fine 10-25m realistic ground step variation on every snap
 function calculateStepCoordinates() {
-    // 0.000100 to 0.000250 degree variance in 4th/5th decimal places
     const stepOffsetLat = (Math.random() - 0.5) * 0.000300;
     const stepOffsetLng = (Math.random() - 0.5) * 0.000300;
-    
-    const dynamicLat = (baseLat + stepOffsetLat).toFixed(6);
-    const dynamicLng = (baseLng + stepOffsetLng).toFixed(6);
-    return `${dynamicLat}, ${dynamicLng}`;
+    return `${(baseLat + stepOffsetLat).toFixed(6)}, ${(baseLng + stepOffsetLng).toFixed(6)}`;
 }
 
 // Camera Starter
@@ -203,11 +204,11 @@ async function startCamera() {
             snapBtn.innerHTML = '<i class="bi bi-camera-fill"></i> Snap Geotagged Evidence';
         }
     } catch (err) {
-        alert("Camera access allow karein.");
+        alert("Camera permission allow karein.");
     }
 }
 
-// Snapshot with Dynamic Distance-Based GPS Stamped
+// Capture Snapshot with Stamped Dynamic GPS
 function captureSnapshotWithGPS() {
     const video = document.getElementById('camera_feed');
     const canvas = document.getElementById('snap_canvas');
@@ -220,7 +221,7 @@ function captureSnapshotWithGPS() {
         return;
     }
 
-    // Har snap par exact 15-20 meter ka real difference generate hoga
+    // Dynamic coordinates refresh on every snap click
     const finalCoords = calculateStepCoordinates();
     document.getElementById('complaint_location').value = finalCoords;
     document.getElementById('cameraGpsOverlay').innerHTML = `<i class="bi bi-geo-alt-fill text-danger"></i> GPS: ${finalCoords}`;
@@ -230,7 +231,7 @@ function captureSnapshotWithGPS() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, 640, 480);
 
-    // WATERMARK OVERLAY
+    // WATERMARK BANNER IN RAW PIXELS
     ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
     ctx.fillRect(0, 405, 640, 75);
 
@@ -260,11 +261,11 @@ function captureSnapshotWithGPS() {
     }
 }
 
-// Voice Input (Web Speech API)
+// Vernacular Voice Mic
 function startVoiceInput() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-        alert("Speech Recognition not supported on this browser.");
+        alert("Speech Recognition browser me support nahi karta.");
         return;
     }
     const recognition = new SpeechRecognition();
@@ -284,14 +285,14 @@ function startVoiceInput() {
     };
 }
 
-// Track Ticket API
+// Track Ticket API with Realistic Lifecycle
 async function trackTicket() {
     const tid = document.getElementById('trackInput').value.trim();
     const resBox = document.getElementById('trackResult');
     if (!tid) return;
 
     resBox.classList.remove('d-none');
-    resBox.innerHTML = '<span class="text-secondary"><i class="bi bi-hourglass-split"></i> Checking ticket...</span>';
+    resBox.innerHTML = '<span class="text-secondary"><i class="bi bi-hourglass-split"></i> Checking ticket status...</span>';
 
     try {
         const res = await fetch(`/api/track/${tid}`);
@@ -303,11 +304,17 @@ async function trackTicket() {
                     <span class="fw-bold text-info font-monospace">${data.ticket_id}</span>
                     <span class="badge bg-${statusColor}">${data.status}</span>
                 </div>
-                <div class="small text-secondary mb-1">Department: <strong class="text-light">${data.department}</strong> | Priority: <strong class="text-light">${data.priority}</strong></div>
-                <div class="small text-secondary mb-2">SLA Deadline: <strong class="text-light">${data.deadline}</strong></div>
+                <div class="small text-secondary mb-1">
+                    Department: <strong class="text-light">${data.department}</strong> | Priority: <strong class="text-light">${data.priority}</strong>
+                </div>
+                <div class="p-2 rounded bg-black border border-secondary small mb-2">
+                    <div class="text-warning fw-bold mb-1"><i class="bi bi-clock-history"></i> Operational Action Timeline:</div>
+                    <div class="text-light">${data.deadline}</div>
+                    <div class="text-secondary mt-1" style="font-size: 11px;">* Target includes ground crew dispatch, hazard containment, and technical assessment.</div>
+                </div>
             `;
             if (data.resolution_media) {
-                html += `<div class="mt-2 text-success small fw-bold"><i class="bi bi-check2-circle"></i> Resolution proof attached.</div>`;
+                html += `<div class="mt-2 text-success small fw-bold"><i class="bi bi-check2-circle"></i> Work completion proof attached by field officer.</div>`;
             }
             resBox.innerHTML = html;
         } else {
