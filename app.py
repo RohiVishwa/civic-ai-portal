@@ -45,7 +45,7 @@ def init_db():
         )
     """)
 
-    # Seed Default Master Officer
+    # Seed Default Officer
     cur.execute("SELECT * FROM officers WHERE officer_id = 'officer'")
     if not cur.fetchone():
         cur.execute("""
@@ -53,7 +53,7 @@ def init_db():
             VALUES ('Chief Municipal Commissioner', 'officer', 'Municipal Administration', 'admin123')
         """)
 
-    # AUTO-SEED SAMPLE CITIZEN GRIEVANCES (Dashboard will never be empty 0)
+    # Check complaints count; agar empty hai toh sample data load karein
     cur.execute("SELECT COUNT(*) FROM complaints")
     count = cur.fetchone()[0]
     if count == 0:
@@ -68,7 +68,7 @@ def init_db():
                 (now - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M"),
                 (now + timedelta(hours=22)).strftime("%Y-%m-%d %H:%M"),
                 "30.731100, 76.169500",
-                ""
+                "https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?w=300&q=80"
             ),
             (
                 "GOV-CIVIC-44219",
@@ -79,7 +79,7 @@ def init_db():
                 (now - timedelta(hours=8)).strftime("%Y-%m-%d %H:%M"),
                 (now + timedelta(days=2)).strftime("%Y-%m-%d %H:%M"),
                 "30.729500, 76.167200",
-                ""
+                "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=300&q=80"
             ),
             (
                 "GOV-CIVIC-31045",
@@ -90,7 +90,7 @@ def init_db():
                 (now - timedelta(days=1)).strftime("%Y-%m-%d %H:%M"),
                 (now + timedelta(days=6)).strftime("%Y-%m-%d %H:%M"),
                 "30.728900, 76.171000",
-                ""
+                "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=300&q=80"
             )
         ]
         cur.executemany("""
@@ -148,7 +148,6 @@ def submit_grievance():
     ticket_num = str(uuid.uuid4().int)[:5]
     ticket_id = f"GOV-CIVIC-{ticket_num}"
 
-    # Handle image saving (compressed Base64 JPEG)
     saved_filename = ""
     if img_data and "base64," in img_data:
         try:
@@ -164,7 +163,6 @@ def submit_grievance():
     now = datetime.now()
     created_at = now.strftime("%Y-%m-%d %H:%M")
 
-    # Dynamic SLA by Priority
     if ai_priority == "Critical":
         sla_label = "24-Hour Emergency SLA"
         deadline = (now + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M")
@@ -317,7 +315,6 @@ def login():
         uid = (request.form.get('officer_id') or request.form.get('username') or '').strip().lower()
         pwd = (request.form.get('password') or '').strip()
 
-        # Direct master override for seamless login
         valid_users = ["officer", "officer@civic.gov", "admin@civic.gov", "admin"]
         valid_passes = ["admin123", "civicadmin@2026", "admin"]
 
@@ -327,7 +324,6 @@ def login():
             session['officer_dept'] = "Municipal Administration"
             return redirect(url_for('admin_panel'))
 
-        # Check newly registered officer in DB
         conn = sqlite3.connect(DB_NAME)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
