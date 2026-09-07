@@ -13,11 +13,7 @@ DB_NAME = os.path.join(BASE_DIR, "civicai.db")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ----------------- CONFIGURABLE MASTER CREDENTIALS -----------------
-DEFAULT_OFFICER_ID = "officer"
-DEFAULT_OFFICER_PASS = "admin123"
-
-# ----------------- DATABASE SETUP -----------------
+# ----------------- DATABASE INITIALIZATION & AUTO-SEED -----------------
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
@@ -48,13 +44,60 @@ def init_db():
             password TEXT
         )
     """)
-    # Ensure Master Officer exists with the updated credentials
-    cur.execute("DELETE FROM officers WHERE officer_id = ?", (DEFAULT_OFFICER_ID,))
-    cur.execute("""
-        INSERT INTO officers (name, officer_id, department, password)
-        VALUES ('Chief Municipal Commissioner', ?, 'Town Planning & Administration', ?)
-    """, (DEFAULT_OFFICER_ID, DEFAULT_OFFICER_PASS))
-    
+
+    # Seed Default Master Officer
+    cur.execute("SELECT * FROM officers WHERE officer_id = 'officer'")
+    if not cur.fetchone():
+        cur.execute("""
+            INSERT INTO officers (name, officer_id, department, password)
+            VALUES ('Chief Municipal Commissioner', 'officer', 'Municipal Administration', 'admin123')
+        """)
+
+    # AUTO-SEED SAMPLE CITIZEN GRIEVANCES (Dashboard will never be empty 0)
+    cur.execute("SELECT COUNT(*) FROM complaints")
+    count = cur.fetchone()[0]
+    if count == 0:
+        now = datetime.now()
+        sample_tickets = [
+            (
+                "GOV-CIVIC-89102",
+                "Severe pipeline burst near main market chowk. Clean drinking water flooding the road since morning.",
+                "Water Supply",
+                "Critical",
+                "Pending",
+                (now - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M"),
+                (now + timedelta(hours=22)).strftime("%Y-%m-%d %H:%M"),
+                "30.731100, 76.169500",
+                ""
+            ),
+            (
+                "GOV-CIVIC-44219",
+                "Deep crater pothole in the middle of sector road causing severe two-wheeler accidents at night.",
+                "Roads & Transport",
+                "High",
+                "Pending",
+                (now - timedelta(hours=8)).strftime("%Y-%m-%d %H:%M"),
+                (now + timedelta(days=2)).strftime("%Y-%m-%d %H:%M"),
+                "30.729500, 76.167200",
+                ""
+            ),
+            (
+                "GOV-CIVIC-31045",
+                "Street garbage container overflowing with foul smell spreading near public school entrance.",
+                "Sanitation & Waste",
+                "Medium",
+                "Pending",
+                (now - timedelta(days=1)).strftime("%Y-%m-%d %H:%M"),
+                (now + timedelta(days=6)).strftime("%Y-%m-%d %H:%M"),
+                "30.728900, 76.171000",
+                ""
+            )
+        ]
+        cur.executemany("""
+            INSERT INTO complaints (ticket_id, description, department, priority, status, created_at, deadline, location, damage_media)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, sample_tickets)
+
     conn.commit()
     conn.close()
 
@@ -64,14 +107,12 @@ init_db()
 def classify_grievance(text):
     text_lower = text.lower()
     
-    # Priority Triage
     priority = "Medium"
     if any(w in text_lower for w in ["urgent", "danger", "burst", "shock", "fire", "spark", "accident", "overflowing", "deadly", "emergency", "current"]):
         priority = "Critical"
     elif any(w in text_lower for w in ["pothole", "deep", "block", "no water", "dark", "huge", "broken", "gaddha"]):
         priority = "High"
 
-    # Department Auto-Triage
     if any(w in text_lower for w in ["water", "pipe", "pipeline", "leak", "sewer", "drain", "tank", "paani", "nali"]):
         department = "Water Supply"
     elif any(w in text_lower for w in ["road", "pothole", "street", "traffic", "divider", "footpath", "highway", "gaddha", "sadak"]):
@@ -268,44 +309,15 @@ def track_ticket(ticket_id):
     except Exception as e:
         return jsonify({"found": False, "msg": str(e)})
 
-# ----------------- OFFICER AUTH & REGISTRATION -----------------
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    error = None
-    success = None
-    if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        officer_id = request.form.get('officer_id', '').strip().lower()
-        department = request.form.get('department', 'Town Planning')
-        password = request.form.get('password', '').strip()
-
-        if not name or not officer_id or not password:
-            error = "Please fill in all required fields."
-        else:
-            try:
-                conn = sqlite3.connect(DB_NAME)
-                cur = conn.cursor()
-                cur.execute("""
-                    INSERT INTO officers (name, officer_id, department, password)
-                    VALUES (?, ?, ?, ?)
-                """, (name, officer_id, department, password))
-                conn.commit()
-                conn.close()
-                success = "Account created successfully! You can now login below."
-            except sqlite3.IntegrityError:
-                error = "This Officer ID already exists. Please choose another or login."
-
-    return render_template('register.html', error=error, success=success)
-
+# ----------------- OFFICER AUTHENTICATION -----------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
     if request.method == 'POST':
-        # Accept either officer_id or username
         uid = (request.form.get('officer_id') or request.form.get('username') or '').strip().lower()
         pwd = (request.form.get('password') or '').strip()
 
-        # Direct Hardcoded Match
+        # Direct master override for seamless login
         valid_users = ["officer", "officer@civic.gov", "admin@civic.gov", "admin"]
         valid_passes = ["admin123", "civicadmin@2026", "admin"]
 
@@ -315,7 +327,7 @@ def login():
             session['officer_dept'] = "Municipal Administration"
             return redirect(url_for('admin_panel'))
 
-        # Check DB records
+        # Check newly registered officer in DB
         conn = sqlite3.connect(DB_NAME)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
@@ -362,8 +374,8 @@ def admin_panel():
                            pending=pending, 
                            resolved=resolved, 
                            denied=denied,
-                           officer_name=session.get('officer_name', 'Field Officer'),
-                           officer_dept=session.get('officer_dept', 'Administration'))
+                           officer_name=session.get('officer_name', 'Chief Officer'),
+                           officer_dept=session.get('officer_dept', 'Municipal Administration'))
 
 # ----------------- UNIVERSAL RESOLVE & DENY HANDLERS -----------------
 @app.route('/admin/resolve/<path:identifier>', methods=['POST'])
