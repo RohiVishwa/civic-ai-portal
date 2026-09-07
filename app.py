@@ -1,33 +1,17 @@
 import os
-import sqlite3
-import time
-import random
+import uuid
 import base64
+import sqlite3
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, session, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = "civic_ai_unified_key_2026"
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_NAME = os.path.join(BASE_DIR, "civic_records.db")
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "static/uploads")
-WORK_FOLDER = os.path.join(BASE_DIR, "static/work_proofs")
+DB_NAME = os.path.join(BASE_DIR, "civicai.db")
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(WORK_FOLDER, exist_ok=True)
 
-OFFICIAL_ROUTING_MAP = {
-    "Roads & Public Works": "pwd.executive.engineer@civicai.gov.in",
-    "Water & Sanitation": "water.sanitation.je@civicai.gov.in",
-    "Sanitation & Waste Management": "sanitation.inspector@civicai.gov.in",
-    "Electricity & Street Lighting": "electricity.nodal@civicai.gov.in",
-    "Town Planning & Enforcement": "townplanning.officer@civicai.gov.in"
-}
-HIGH_AUTHORITY_EMAIL = "commissioner.municipal@civicai.gov.in"
-
-def get_assigned_officer_email(dept):
-    return OFFICIAL_ROUTING_MAP.get(dept, "pwd.executive.engineer@civicai.gov.in")
-
+# ----------------- DATABASE INITIALIZATION -----------------
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
@@ -37,219 +21,140 @@ def init_db():
             ticket_id TEXT UNIQUE,
             description TEXT,
             department TEXT,
-            priority TEXT DEFAULT 'High',
+            priority TEXT,
             status TEXT DEFAULT 'Pending',
-            damage_media TEXT,
-            damage_media_type TEXT DEFAULT 'image',
-            resolution_media TEXT,
-            resolution_media_type TEXT,
-            location TEXT,
             created_at TEXT,
             deadline TEXT,
-            escalated INTEGER DEFAULT 0
+            location TEXT,
+            damage_media TEXT,
+            resolution_media TEXT,
+            denial_reason TEXT
         )
     """)
-    conn.commit()
-    
-    # Check and add any missing columns dynamically
-    cur.execute("PRAGMA table_info(complaints)")
-    existing_cols = [c[1] for c in cur.fetchall()]
-    needed_cols = {
-        "damage_media": "TEXT",
-        "damage_media_type": "TEXT DEFAULT 'image'",
-        "resolution_media": "TEXT",
-        "resolution_media_type": "TEXT",
-        "location": "TEXT",
-        "created_at": "TEXT",
-        "deadline": "TEXT",
-        "escalated": "INTEGER DEFAULT 0"
-    }
-    for col, ctype in needed_cols.items():
-        if col not in existing_cols:
-            try:
-                cur.execute(f"ALTER TABLE complaints ADD COLUMN {col} {ctype}")
-            except Exception as e:
-                print(f"Column add note: {e}")
     conn.commit()
     conn.close()
 
 init_db()
 
-def classify_issue(text):
-    t = (text or "").lower()
-    if any(k in t for k in ["water", "pipe", "leak", "sewer", "drain", "drainage", "overflow", "gutter", "tap"]):
-        return "Water & Sanitation", "High"
-    elif any(k in t for k in ["garbage", "trash", "waste", "dump", "bin", "smell", "dirt", "cleaning"]):
-        return "Sanitation & Waste Management", "Medium"
-    elif any(k in t for k in ["light", "streetlight", "pole", "electric", "wire", "power", "spark"]):
-        return "Electricity & Street Lighting", "Critical"
-    elif any(k in t for k in ["encroachment", "illegal", "hawker", "parking", "footpath"]):
-        return "Town Planning & Enforcement", "Medium"
-    else:
-        return "Roads & Public Works", "High"
+# ----------------- AI CLASSIFICATION ENGINE -----------------
+def classify_grievance(text):
+    text_lower = text.lower()
+    
+    # Priority
+    priority = "Medium"
+    if any(w in text_lower for w in ["urgent", "danger", "burst", "shock", "fire", "spark", "accident", "overflowing", "deadly", "emergency"]):
+        priority = "Critical"
+    elif any(w in text_lower for w in ["pothole", "deep", "block", "no water", "dark", "huge", "broken"]):
+        priority = "High"
 
+    # Department Auto-Triage
+    if any(w in text_lower for w in ["water", "pipe", "pipeline", "leak", "sewer", "drain", "tank", "paani", "nali"]):
+        department = "Water Supply"
+    elif any(w in text_lower for w in ["road", "pothole", "street", "traffic", "divider", "footpath", "highway", "gaddha", "sadak"]):
+        department = "Roads & Transport"
+    elif any(w in text_lower for w in ["garbage", "trash", "waste", "smell", "dustbin", "clean", "dump", "kachra", "safai"]):
+        department = "Sanitation & Waste"
+    elif any(w in text_lower for w in ["light", "wire", "pole", "electric", "power", "transformer", "blackout", "bijli", "taar"]):
+        department = "Electricity & Power"
+    else:
+        department = "Town Planning"
+
+    return department, priority
+
+# ----------------- ROUTES -----------------
 @app.route('/')
 def home():
     return render_template('index.html')
 
-@app.route('/analyze', methods=['POST'])
-def analyze():
-    try:
-        desc = request.form.get('description', '').strip()
-        loc = request.form.get('location', '').strip() or request.form.get('coords', '').strip() or "30.730376, 76.168847"
-        sel_dept = request.form.get('department', '').strip()
+# Support both POST /submit and POST /report so 404 never happens again
+@app.route('/submit', methods=['POST', 'GET'])
+@app.route('/report', methods=['POST', 'GET'])
+def submit_grievance():
+    if request.method == 'GET':
+        return redirect(url_for('home'))
 
-        # Live Citizen Camera Image Save
-        filename = ""
-        b64 = (request.form.get('image_base64') or '').strip()
-        file = request.files.get('damage_media') or request.files.get('file') or request.files.get('image')
+    desc = request.form.get('description', '').strip()
+    dept = request.form.get('department', 'Auto-Detect via AI Engine')
+    loc = request.form.get('location', '30.730376, 76.168847')
+    img_data = request.form.get('image_data', '')
 
-        if b64 and ',' in b64:
-            try:
-                header, encoded = b64.split(',', 1)
-                filename = f"live_evidence_{int(time.time())}.jpg"
-                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                with open(os.path.join(UPLOAD_FOLDER, filename), "wb") as fh:
-                    fh.write(base64.b64decode(encoded))
-            except Exception as err:
-                print("Base64 save error:", err)
-        elif file and file.filename != '':
-            ext = os.path.splitext(file.filename)[1].lower() or '.jpg'
-            filename = f"live_evidence_{int(time.time())}{ext}"
-            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-            file.save(os.path.join(UPLOAD_FOLDER, filename))
-        elif b64 and ',' in b64:
-            try:
-                header, encoded = b64.split(',', 1)
-                filename = f"evidence_{int(time.time())}.jpg"
-                with open(os.path.join(UPLOAD_FOLDER, filename), "wb") as fh:
-                    fh.write(base64.b64decode(encoded))
-            except Exception as e:
-                print("Base64 decode error:", e)
+    ai_dept, ai_priority = classify_grievance(desc)
+    final_dept = ai_dept if dept == "Auto-Detect via AI Engine" else dept
 
-        detected_dept, priority = classify_issue(desc)
-        department = detected_dept if (not sel_dept or sel_dept == "Auto-Detect via AI Engine") else sel_dept
-        officer_email = get_assigned_officer_email(department)
+    ticket_num = str(uuid.uuid4().int)[:5]
+    ticket_id = f"GOV-CIVIC-{ticket_num}"
 
-        now_dt = datetime.now()
-        created_at = now_dt.strftime("%Y-%m-%d %H:%M:%S")
-        deadline = (now_dt + timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
-        ticket_id = f"GOV-CIVIC-{random.randint(10000, 99999)}"
-        analysis_text = desc if desc else f"AI Vision: Identified physical hazard requiring prompt {department} intervention."
-
-        conn = sqlite3.connect(DB_NAME)
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO complaints (ticket_id, description, department, priority, status, damage_media, location, created_at, deadline, escalated)
-            VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?, 0)
-        """, (ticket_id, analysis_text, department, priority, filename, loc, created_at, deadline))
-        conn.commit()
-        conn.close()
-
-        return render_template('dashboard.html',
-                               ticket_id=ticket_id,
-                               analysis=analysis_text,
-                               department=department,
-                               priority=priority,
-                               location=loc,
-                               officer_email=officer_email,
-                               high_authority_email=HIGH_AUTHORITY_EMAIL,
-                               status='Pending',
-                               escalated=0)
-    except Exception as e:
-        return f"Processing Error: {e}", 500
-
-@app.route('/admin')
-def admin_panel():
-    if not session.get('admin_logged'):
-        return redirect('/login')
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM complaints ORDER BY id DESC")
-    rows = cur.fetchall()
-
-    complaints = []
-    total_active = 0
-    pending_count = 0
-    resolved_count = 0
-    denied_count = 0
-
-    for r in rows:
-        d = dict(r)
-        st = (d.get('status') or 'Pending').strip()
-        
-        if st == 'Resolved':
-            resolved_count += 1
-        elif st in ['Denied', 'Deleted']:
-            denied_count += 1
-        else:
-            pending_count += 1
-            total_active += 1
-
-        raw_date = d.get('created_at') or ''
+    # Handle image saving (compressed base64 data URL)
+    saved_filename = ""
+    if img_data and "base64," in img_data:
         try:
-            if raw_date:
-                dt_obj = datetime.strptime(raw_date.split('.')[0], "%Y-%m-%d %H:%M:%S")
-                d['formatted_date'] = dt_obj.strftime("%d %b %Y")
-                d['formatted_day'] = dt_obj.strftime("%A")
-                d['formatted_time'] = dt_obj.strftime("%I:%M %p")
-            else:
-                d['formatted_date'] = datetime.now().strftime("%d %b %Y")
-                d['formatted_day'] = datetime.now().strftime("%A")
-                d['formatted_time'] = "Logged"
-        except Exception:
-            d['formatted_date'] = datetime.now().strftime("%d %b %Y")
-            d['formatted_day'] = datetime.now().strftime("%A")
-            d['formatted_time'] = "Logged"
+            header, encoded = img_data.split("base64,", 1)
+            file_bytes = base64.b64decode(encoded)
+            saved_filename = f"{ticket_id}_{uuid.uuid4().hex[:6]}.jpg"
+            file_path = os.path.join(UPLOAD_FOLDER, saved_filename)
+            with open(file_path, "wb") as f:
+                f.write(file_bytes)
+        except Exception as e:
+            print("Error decoding base64 image:", e)
 
-        complaints.append(d)
-    conn.close()
+    now = datetime.now()
+    created_at = now.strftime("%Y-%m-%d %H:%M")
+    deadline = (now + timedelta(days=7)).strftime("%Y-%m-%d")
 
-    return render_template('admin.html',
-                           complaints=complaints,
-                           total_active=total_active,
-                           pending_count=pending_count,
-                           resolved_count=resolved_count,
-                           denied_count=denied_count)
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        user = (request.form.get('username') or '').strip().lower()
-        pwd = (request.form.get('password') or '').strip()
-        if user in ['officer', 'admin'] and pwd == 'admin123':
-            session['admin_logged'] = True
-            return redirect('/admin')
-        return render_template('login.html', error="Invalid Credentials")
-    return render_template('login.html')
-
-@app.route('/logout')
-def logout():
-    session.pop('admin_logged', None)
-    return redirect('/login')
-
-@app.route('/deny/<ticket_id>')
-def deny_ticket(ticket_id):
-    if not session.get('admin_logged'):
-        return redirect('/login')
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    cur.execute("UPDATE complaints SET status = 'Denied' WHERE ticket_id = ?", (ticket_id,))
+    cur.execute("""
+        INSERT INTO complaints (ticket_id, description, department, priority, status, created_at, deadline, location, damage_media)
+        VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?)
+    """, (ticket_id, desc, final_dept, ai_priority, created_at, deadline, loc, saved_filename))
     conn.commit()
     conn.close()
-    return redirect('/admin')
 
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body {{ background: #0f172a; color: #fff; font-family: system-ui; padding: 40px 15px; }}
+            .res-card {{ background: #1e293b; border: 1px solid #3b82f6; border-radius: 18px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container text-center" style="max-width: 520px;">
+            <div class="res-card p-4 shadow-lg text-white">
+                <div class="display-3 text-info mb-2"><i class="bi bi-check-circle-fill"></i></div>
+                <h3 class="fw-bold mb-1">Grievance Dispatched</h3>
+                <p class="text-secondary small mb-3">AI auto-triage has locked coordinates and routed this issue.</p>
+                <div class="p-3 bg-dark rounded-3 mb-4 border border-secondary text-start">
+                    <div class="mb-1"><strong>Ticket ID:</strong> <span class="text-info font-monospace fw-bold">{ticket_id}</span></div>
+                    <div class="mb-1"><strong>Department:</strong> {final_dept}</div>
+                    <div class="mb-1"><strong>Assigned Priority:</strong> <span class="badge bg-warning text-dark">{ai_priority}</span></div>
+                    <div><strong>7-Day SLA Deadline:</strong> {deadline}</div>
+                </div>
+                <a href="/" class="btn btn-info fw-bold py-2 w-100"><i class="bi bi-arrow-left"></i> Back to Citizen Portal</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
 
+# ----------------- PUBLIC TRACKING API -----------------
 @app.route('/api/track/<ticket_id>', methods=['GET'])
 def track_ticket(ticket_id):
     try:
         conn = sqlite3.connect(DB_NAME)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        cur.execute("SELECT ticket_id, department, priority, status, created_at, deadline, damage_media, resolution_media, location FROM complaints WHERE ticket_id = ?", (ticket_id.strip(),))
+        cur.execute("""
+            SELECT ticket_id, department, priority, status, created_at, deadline, damage_media, resolution_media, location 
+            FROM complaints WHERE ticket_id = ?
+        """, (ticket_id.strip(),))
         row = cur.fetchone()
         conn.close()
+
         if row:
             return jsonify({
                 "found": True,
@@ -263,12 +168,52 @@ def track_ticket(ticket_id):
                 "resolution_media": row["resolution_media"],
                 "location": row["location"]
             })
-        return jsonify({"found": False, "msg": "Ticket not found."})
+        return jsonify({"found": False, "msg": "Ticket ID not found in municipal records."})
     except Exception as e:
         return jsonify({"found": False, "msg": str(e)})
 
+# ----------------- ADMIN DASHBOARD -----------------
+@app.route('/admin')
+def admin_panel():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM complaints ORDER BY id DESC")
+    complaints = cur.fetchall()
+
+    total = len(complaints)
+    pending = sum(1 for c in complaints if c["status"] == "Pending")
+    resolved = sum(1 for c in complaints if c["status"] == "Resolved")
+    denied = sum(1 for c in complaints if c["status"] == "Denied")
+    conn.close()
+
+    return render_template('admin.html', complaints=complaints, total=total, pending=pending, resolved=resolved, denied=denied)
+
+@app.route('/admin/resolve/<int:cid>', methods=['POST'])
+def resolve_ticket(cid):
+    file = request.files.get('resolution_photo')
+    filename = ""
+    if file and file.filename != "":
+        filename = f"resolved_{cid}_{uuid.uuid4().hex[:6]}.jpg"
+        file.save(os.path.join(UPLOAD_FOLDER, filename))
+
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("UPDATE complaints SET status = 'Resolved', resolution_media = ? WHERE id = ?", (filename, cid))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/deny/<int:cid>', methods=['POST'])
+def deny_ticket(cid):
+    reason = request.form.get('denial_reason', 'Spam / Out of Jurisdiction')
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("UPDATE complaints SET status = 'Denied', denial_reason = ? WHERE id = ?", (reason, cid))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5001))
     app.run(host='0.0.0.0', port=port, debug=True)
-

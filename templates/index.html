@@ -3,52 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CivicAI | Autonomous Municipal Triage Engine</title>
+    <title>CivicAI | Smart Citizen Redressal Portal</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-card: #1e293b;
+            --border-color: #334155;
+            --accent-blue: #38bdf8;
+            --accent-green: #10b981;
+        }
         body {
-            background-color: #0b0f19;
-            color: #f1f5f9;
+            background: linear-gradient(135deg, #0b1120 0%, #0f172a 50%, #1e1b4b 100%);
+            color: #f8fafc;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             min-height: 100vh;
         }
         .civic-card {
-            background-color: #111827;
-            border: 1px solid #1f2937;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+        }
+        .track-card {
+            background: linear-gradient(90deg, #1e293b 0%, #172554 100%);
+            border: 1px solid #3b82f6;
             border-radius: 16px;
         }
         .form-control, .form-select {
-            background-color: #1f2937;
-            border: 1px solid #374151;
-            color: #ffffff;
+            background-color: #0f172a;
+            border: 1px solid var(--border-color);
+            color: #f8fafc;
+            border-radius: 10px;
         }
         .form-control:focus, .form-select:focus {
-            background-color: #1f2937;
-            border-color: #38bdf8;
+            background-color: #0f172a;
+            border-color: var(--accent-blue);
             color: #ffffff;
             box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25);
         }
         .camera-container {
             position: relative;
-            background-color: #030712;
-            border: 2px dashed #374151;
-            border-radius: 12px;
+            background-color: #020617;
+            border: 2px dashed #475569;
+            border-radius: 14px;
             height: 290px;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        #camera_stream {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: none;
-        }
-        #snap_preview {
+        #camera_stream, #snap_preview {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -58,15 +66,27 @@
             position: absolute;
             bottom: 12px;
             left: 12px;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(4px);
-            border: 1px solid #374151;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(6px);
+            border: 1px solid #38bdf8;
             font-family: ui-monospace, monospace;
             font-size: 11px;
             color: #38bdf8;
-            padding: 4px 10px;
-            border-radius: 6px;
+            padding: 5px 10px;
+            border-radius: 8px;
             z-index: 10;
+        }
+        /* Mic Pulse Animation */
+        .mic-listening {
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+            background-color: #ef4444 !important;
+            border-color: #f87171 !important;
+            color: white !important;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
     </style>
 </head>
@@ -74,10 +94,10 @@
 
 <div class="container" style="max-width: 760px;">
 
-    <!-- PUBLIC TICKET TRACKING SECTION -->
-    <div class="card bg-black border-secondary text-white mb-4 p-3 p-md-4 rounded-4 shadow">
-        <h5 class="fw-bold text-info mb-1"><i class="bi bi-search"></i> Track Your Grievance Status</h5>
-        <p class="text-secondary small mb-3">Enter your Ticket ID (e.g., <code>GOV-CIVIC-XXXXX</code>) to check live status and resolution proof.</p>
+    <!-- PUBLIC TRACKING SECTION -->
+    <div class="card track-card text-white mb-4 p-4 shadow">
+        <h5 class="fw-bold text-info mb-1"><i class="bi bi-search"></i> Track Grievance Status</h5>
+        <p class="text-light-50 small mb-3 text-secondary">Enter your Ticket ID (e.g., <code>GOV-CIVIC-XXXXX</code>) to check live progress.</p>
         <div class="input-group">
             <input type="text" id="track_ticket_input" class="form-control bg-dark text-white border-secondary" placeholder="Enter Ticket ID...">
             <button class="btn btn-info px-4 fw-bold" type="button" onclick="checkGrievanceStatus()">
@@ -88,33 +108,51 @@
     </div>
 
     <!-- MAIN CITIZEN GRIEVANCE PORTAL -->
-    <div class="civic-card p-4 shadow-lg">
+    <div class="civic-card p-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-                <h4 class="fw-bold text-white mb-0"><i class="bi bi-shield-check text-info"></i> CivicAI Citizen Portal</h4>
-                <p class="text-secondary small mb-0">Autonomous Grievance Redressal & Ground Triage</p>
+                <h4 class="fw-bold text-white mb-0">
+                    <i class="bi bi-shield-check text-info"></i> CivicAI Citizen Portal
+                </h4>
+                <p class="text-secondary small mb-0">Autonomous Municipal Triage & Ground Dispatch</p>
             </div>
-            <a href="/admin" class="btn btn-outline-info btn-sm">
+            <a href="/admin" class="btn btn-outline-info btn-sm rounded-pill px-3">
                 <i class="bi bi-person-badge"></i> Officer Login
             </a>
         </div>
 
-        <p class="text-secondary small mb-4">Report civic issues with satellite GPS auto-tagging, live visual verification, and automated municipal routing.</p>
+        <p class="text-secondary small mb-4">Report civic issues with satellite GPS auto-tagging, multilingual voice input, and AI-powered municipal routing.</p>
 
         <form id="grievance_form" method="POST" action="/submit">
-            <!-- Hidden Location and Compressed Image Data -->
+            <!-- Hidden Inputs -->
             <input type="hidden" name="location" id="complaint_location" value="30.730376, 76.168847">
             <input type="hidden" name="image_data" id="image_data">
 
-            <!-- Issue Description -->
+            <!-- Description with Multilingual Voice Mic -->
             <div class="mb-3">
-                <label class="form-label text-light small fw-bold"><i class="bi bi-card-text"></i> Grievance Description / Citizen Notes</label>
-                <textarea class="form-control" name="description" id="description" rows="3" placeholder="Describe the issue in detail (e.g. broken water pipeline, pothole on road, overflowing garbage container)..." required></textarea>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label text-light small fw-bold mb-0">
+                        <i class="bi bi-card-text text-info"></i> Grievance Description / Citizen Notes
+                    </label>
+                    <span id="voice_status_text" class="badge bg-secondary" style="font-size: 11px;">Voice: Ready</span>
+                </div>
+                
+                <div class="position-relative">
+                    <textarea class="form-control pe-5" name="description" id="description" rows="3" placeholder="Bol kar ya type karke complaint likhein (e.g., Road par bada pothole hai / paani ka pipe phat gaya hai)..." required></textarea>
+                    
+                    <!-- VOICE MIC BUTTON -->
+                    <button type="button" id="voice_mic_btn" class="btn btn-primary position-absolute top-0 end-0 m-2 rounded-circle" style="width: 38px; height: 38px; padding: 0; display: flex; align-items: center; justify-content: center;" onclick="toggleVoiceRecording()" title="Click to speak (Hindi, English, etc.)">
+                        <i class="bi bi-mic-fill" id="mic_icon"></i>
+                    </button>
+                </div>
+                <small class="text-secondary" style="font-size: 11px;">
+                    <i class="bi bi-info-circle"></i> Mic button dabayein aur apni bhasha me bolein. Automatically text me convert ho jayega.
+                </small>
             </div>
 
             <!-- Department Selection -->
             <div class="mb-3">
-                <label class="form-label text-light small fw-bold"><i class="bi bi-diagram-3"></i> Relevant Department</label>
+                <label class="form-label text-light small fw-bold"><i class="bi bi-diagram-3 text-info"></i> Relevant Department</label>
                 <select class="form-select" name="department" id="department">
                     <option value="Auto-Detect via AI Engine">Auto-Detect via AI Engine</option>
                     <option value="Roads & Transport">Roads & Transport</option>
@@ -127,12 +165,12 @@
 
             <!-- Live Camera Evidence Viewport -->
             <div class="mb-3">
-                <label class="form-label text-light small fw-bold"><i class="bi bi-camera-video"></i> Live Evidence Capture (Real-time AI Scan + Satellite GPS)</label>
+                <label class="form-label text-light small fw-bold"><i class="bi bi-camera-video text-info"></i> Live Evidence Capture (Real-time AI Scan + Satellite GPS)</label>
                 <div class="camera-container" id="camera_box">
                     <video id="camera_stream" autoplay playsinline muted></video>
                     <img id="snap_preview" alt="Ground Evidence Preview">
                     <div id="cam_status" class="text-secondary small text-center px-3">
-                        <i class="bi bi-camera text-info fs-3 d-block mb-1"></i>
+                        <i class="bi bi-camera text-info fs-2 d-block mb-1"></i>
                         Click <strong>Open / Switch Camera</strong> to activate stream.
                     </div>
                     <div class="badge-gps">
@@ -140,14 +178,14 @@
                     </div>
                 </div>
                 <canvas id="capture_canvas" style="display: none;"></canvas>
-                <!-- Native Camera Fallback Input -->
+                <!-- Direct Device Camera Fallback -->
                 <input type="file" id="native_camera_input" accept="image/*" capture="environment" style="display: none;" onchange="handleNativeCapture(this)">
             </div>
 
             <!-- Action Controls -->
             <div class="row g-2 mb-4">
                 <div class="col-6">
-                    <button type="button" class="btn btn-outline-secondary w-100 text-white" onclick="toggleCameraStream()">
+                    <button type="button" class="btn btn-outline-info w-100 text-white" onclick="toggleCameraStream()">
                         <i class="bi bi-arrow-repeat"></i> Open / Switch Camera
                     </button>
                 </div>
@@ -159,7 +197,7 @@
             </div>
 
             <!-- Submit Button -->
-            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" id="submit_btn">
+            <button type="submit" class="btn btn-info w-100 py-2 fw-bold shadow" id="submit_btn">
                 <i class="bi bi-lightning-charge-fill"></i> Process Grievance & Dispatch via AI
             </button>
         </form>
@@ -169,10 +207,78 @@
 <!-- SCRIPTS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bundle.min.js"></script>
 <script>
+// 1. MULTILINGUAL VOICE SPEECH-TO-TEXT ENGINE
+let recognition = null;
+let isRecording = false;
+
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    // 'hi-IN' supports Hindi + Indian English / Hinglish fluently
+    recognition.lang = 'hi-IN';
+
+    recognition.onstart = function() {
+        isRecording = true;
+        document.getElementById('voice_mic_btn').classList.add('mic-listening');
+        document.getElementById('voice_status_text').className = 'badge bg-danger';
+        document.getElementById('voice_status_text').innerText = 'Listening... Speak now';
+    };
+
+    recognition.onresult = function(event) {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            transcript += event.results[i][0].transcript;
+        }
+        const descBox = document.getElementById('description');
+        descBox.value = transcript;
+    };
+
+    recognition.onerror = function(event) {
+        console.warn('Speech recognition error:', event.error);
+        stopVoiceRecording();
+    };
+
+    recognition.onend = function() {
+        stopVoiceRecording();
+    };
+} else {
+    console.log("Web Speech API not supported in this browser.");
+}
+
+function toggleVoiceRecording() {
+    if (!recognition) {
+        alert("Voice recognition is not supported in this browser. Please use Google Chrome.");
+        return;
+    }
+    if (isRecording) {
+        recognition.stop();
+        stopVoiceRecording();
+    } else {
+        try {
+            recognition.start();
+        } catch(e) {
+            console.error(e);
+        }
+    }
+}
+
+function stopVoiceRecording() {
+    isRecording = false;
+    const btn = document.getElementById('voice_mic_btn');
+    if (btn) btn.classList.remove('mic-listening');
+    const badge = document.getElementById('voice_status_text');
+    if (badge) {
+        badge.className = 'badge bg-success';
+        badge.innerText = 'Voice: Captured';
+    }
+}
+
+// 2. CAMERA ENGINE
 let streamObject = null;
 let currentCameraMode = "environment";
 
-// 1. HARDWARE CAMERA STREAM CONTROLLER
 async function toggleCameraStream() {
     const video = document.getElementById("camera_stream");
     const preview = document.getElementById("snap_preview");
@@ -180,7 +286,6 @@ async function toggleCameraStream() {
 
     if (preview) preview.style.display = "none";
     
-    // Switch between front and rear cameras
     if (streamObject) {
         streamObject.getTracks().forEach(track => track.stop());
         streamObject = null;
@@ -212,18 +317,17 @@ async function toggleCameraStream() {
             if (statusBox) statusBox.style.display = "none";
             return;
         } catch (err) {
-            console.warn("Attempting next camera config:", err);
+            console.warn("Retrying camera mode:", err);
         }
     }
 
-    // Direct Mobile / Desktop fallback via native capture input if WebRTC stream is blocked
+    // Direct fallback if camera stream permissions are blocked
     if (statusBox) {
         statusBox.innerHTML = '<span class="text-warning">Webcam locked. Opening direct camera...</span>';
     }
     document.getElementById("native_camera_input").click();
 }
 
-// 2. FALLBACK HANDLER FOR NATIVE FILE/CAMERA PICKER
 function handleNativeCapture(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -259,7 +363,6 @@ function handleNativeCapture(input) {
     }
 }
 
-// 3. SNAPSHOT EXTRACTION & CLIENT COMPRESSION
 function takeSnapshot() {
     const video = document.getElementById("camera_stream");
     const preview = document.getElementById("snap_preview");
@@ -267,7 +370,6 @@ function takeSnapshot() {
     const statusBox = document.getElementById("cam_status");
 
     if (!streamObject || !video.videoWidth) {
-        // If live stream is not running, trigger the direct hardware capture
         document.getElementById("native_camera_input").click();
         return;
     }
@@ -291,7 +393,7 @@ function takeSnapshot() {
     alert("✓ Live evidence snapshot captured and GPS tagged!");
 }
 
-// 4. GPS TRACKER & AUTO-TAGGER
+// 3. GPS ACQUISITION
 function acquireGPS() {
     if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
@@ -301,12 +403,12 @@ function acquireGPS() {
             document.getElementById("lng_disp").innerText = lng;
             document.getElementById("complaint_location").value = `${lat}, ${lng}`;
         }, (err) => {
-            console.log("GPS fetch skipped or denied:", err.message);
+            console.log("GPS bypass:", err.message);
         });
     }
 }
 
-// 5. PUBLIC TICKET TRACKING SYSTEM
+// 4. PUBLIC TICKET TRACKING
 async function checkGrievanceStatus() {
     const tidInput = document.getElementById("track_ticket_input");
     const resBox = document.getElementById("track_result");
@@ -326,7 +428,7 @@ async function checkGrievanceStatus() {
         const data = await response.json();
 
         if (data.found) {
-            let badge = '<span class="badge bg-warning text-dark">Pending Triage</span>';
+            let badge = '<span class="badge bg-warning text-dark">Pending Action</span>';
             if (data.status === "Resolved") badge = '<span class="badge bg-success">Resolved</span>';
             if (data.status === "Denied") badge = '<span class="badge bg-danger">Denied / Invalid</span>';
 
@@ -352,7 +454,7 @@ async function checkGrievanceStatus() {
             `;
         } else {
             resBox.className = "mt-3 alert alert-danger";
-            resBox.innerHTML = `<i class="bi bi-exclamation-octagon"></i> ${data.msg || "Ticket ID not found. Verify your ticket format."}`;
+            resBox.innerHTML = `<i class="bi bi-exclamation-octagon"></i> ${data.msg || "Ticket ID not found."}`;
         }
     } catch (err) {
         resBox.className = "mt-3 alert alert-danger";
@@ -360,10 +462,9 @@ async function checkGrievanceStatus() {
     }
 }
 
-// 6. INITIALIZATION
+// 5. INITIALIZATION
 window.addEventListener("DOMContentLoaded", () => {
     acquireGPS();
-
     const trackInput = document.getElementById("track_ticket_input");
     if (trackInput) {
         trackInput.addEventListener("keydown", (e) => {
